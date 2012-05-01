@@ -3,11 +3,13 @@ require 'fileutils'
 
 module Vault
   class Bucket
+    attr_reader :id, :capabilities, :path
+    
     class InvalidCapabilityError < ArgumentError; end
     
     # Generate a new bucket
     def self.create
-      signing_key = OpenSSL::PKey::RSA.new(2048)
+      signing_key = OpenSSL::PKey::DSA.new(2048)
       read_key    = Digest::SHA256.hexdigest(signing_key.to_der)
       
       new(signing_key.public_key.to_der, read_key, signing_key.to_der).tap do |bucket|
@@ -21,7 +23,7 @@ module Vault
           raise InvalidCapabilityError, "read key does not match signing key"
         end
         
-        @signing_key = OpenSSL::PKey::RSA.new(signing_key)
+        @signing_key = OpenSSL::PKey::DSA.new(signing_key)
         
         if @signing_key.public_key.to_der != verify_key
           raise InvalidCapabilityError, "verify key does not match signing key"
@@ -30,7 +32,7 @@ module Vault
         @signing_key = nil
       end
       
-      @verify_key = OpenSSL::PKey::RSA.new(verify_key)
+      @verify_key = OpenSSL::PKey::DSA.new(verify_key)
       @read_key   = [read_key].pack("H*") if read_key
       @id         = Digest::SHA256.hexdigest(@verify_key.to_der)
       
@@ -48,6 +50,7 @@ module Vault
     
     def save
       @path.mkdir
+      @path.join('verify.key').open('w', 0600) { |f| f << @verify_key.to_der }
     end
     
     def destroy
