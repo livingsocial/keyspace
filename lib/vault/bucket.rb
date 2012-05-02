@@ -71,17 +71,21 @@ module Vault
       [signature.size, signature, message].pack("CA*A*")
     end
 
-    # Decrypt an encrypted value, checking its authenticity with the bucket's verify key
-    def decrypt(encrypted_value)
+    # Determine if the given encrypted value is authentic
+    def verify(encrypted_value)
       signature_size, rest = encrypted_value.unpack("CA*")
       signature, message = rest.unpack("A#{signature_size}A*")
       digest = Digest::SHA1.digest(message)
 
-      unless @verify_key.sysverify(digest, signature)
-        raise InvalidSignatureError, "potentially forged data: signature mismatch"
-      end
+      @verify_key.sysverify(digest, signature)
+    end
 
-      key_size, rest = message.unpack("CA*")
+    # Decrypt an encrypted value, checking its authenticity with the bucket's verify key
+    def decrypt(encrypted_value)
+      raise InvalidSignatureError, "potentially forged data: signature mismatch" unless verify(encrypted_value)
+
+      signature_size, rest = encrypted_value.unpack("CA*")
+      signature, key_size, rest = rest.unpack("A#{signature_size}CA*")
       key, timestamp, iv, message_size, ciphertext = rest.unpack("A#{key_size}NA16NA*")
 
       # Cast to Time from an integer timestamp
