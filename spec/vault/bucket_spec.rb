@@ -24,6 +24,8 @@ describe Vault::Bucket do
 
   def with_bucket(&block)
     bucket = Vault::Bucket.create
+    bucket.save
+
     begin
       yield(bucket)
     ensure

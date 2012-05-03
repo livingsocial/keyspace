@@ -4,6 +4,7 @@ require 'fileutils'
 module Vault
   class Bucket
     attr_reader :id, :capabilities, :path
+    attr_reader :read_key, :signing_key, :verify_key
 
     class InvalidCapabilityError < ArgumentError; end # potentially forged credentials
     class InvalidSignatureError < ArgumentError; end  # potentially forged data
@@ -15,9 +16,7 @@ module Vault
       # TODO: address potential length extension attack
       read_key = Digest::SHA256.hexdigest(signing_key.to_der)
 
-      new(signing_key.public_key.to_der, read_key, signing_key.to_der).tap do |bucket|
-        bucket.save
-      end
+      new(signing_key.public_key.to_der, read_key, signing_key.to_der)
     end
 
     # Instantiate a bucket from its constituent keys
