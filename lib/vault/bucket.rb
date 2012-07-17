@@ -1,50 +1,31 @@
 require 'openssl'
 require 'fileutils'
+require 'digest/sha2'
 
 module Vault
+  class InvalidCapabilityError < ArgumentError; end # potentially forged credentials
+  class InvalidSignatureError  < ArgumentError; end # potentially forged data
+
   class Bucket
     attr_reader :id, :capabilities, :path
-    attr_reader :read_key, :signing_key, :verify_key
-
-    class InvalidCapabilityError < ArgumentError; end # potentially forged credentials
-    class InvalidSignatureError < ArgumentError; end  # potentially forged data
+    attr_reader :public_key, :encryption_key, :signature_key
 
     # Generate a completely new bucket
     def self.create
-      signing_key = OpenSSL::PKey::DSA.new(2048)
+      signature_key  = SignatureAlgorithm.generate_key
+      encryption_key = Vault.random_bytes(32)
 
-      # TODO: address potential length extension attack
-      read_key = Digest::SHA256.hexdigest(signing_key.to_der)
-
-      new(signing_key.public_key.to_der, read_key, signing_key.to_der)
+      new(signature_key, encryption_key)
     end
 
     # Instantiate a bucket from its constituent keys
-    def initialize(verify_key, read_key = nil, signing_key = nil)
-      if signing_key
-        if read_key && read_key != Digest::SHA256.hexdigest(signing_key)
-          raise InvalidCapabilityError, "read key does not match signing key"
-        end
+    def initialize(signature_key, encryption_key = nil)
+      @signature_key, @encryption_key = signature_key, encryption_key
+      @public_key = SignatureAlgorithm.public_key(signature_key)
+      @signature_key = nil if @signature_key == @public_key
 
-        @signing_key = OpenSSL::PKey::DSA.new(signing_key)
-
-        if @signing_key.public_key.to_der != verify_key
-          raise InvalidCapabilityError, "potentially forged credentials: verify key does not match signing key"
-        end
-      else
-        @signing_key = nil
-      end
-
-      @verify_key = OpenSSL::PKey::DSA.new(verify_key)
-      @read_key   = [read_key].pack("H*") if read_key
-
-      # TODO: address potential length extension attack
-      @id = Digest::SHA256.hexdigest(@verify_key.to_der)
-
-      @capabilities = []
-      @capabilities << :read   if @read_key
-      @capabilities << :write  if @signing_key
-      @capabilities << :verify if @verify_key
+      # We might consider using HMAC here
+      @id = Digest::SHA256.hexdigest(@public_key)
     end
 
     # Encrypt a key/value pair for insertion into the vault
@@ -56,17 +37,15 @@ module Vault
       cipher = OpenSSL::Cipher::Cipher.new("aes-256-cbc")
       cipher.encrypt
 
-      # TODO: KDF w\ a random salt here perhaps?
-      cipher.key = @read_key
+      cipher.key = @encryption_key
       cipher.iv  = iv = cipher.random_iv
 
       ciphertext =  cipher.update(value)
       ciphertext << cipher.final
 
       # TODO: hash/encrypt key
-      # TODO: Y2038 compliance o_O
-      message   = [key.size, key, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("CA*NA16NA*")
-      signature = @signing_key.syssign Digest::SHA1.digest(message)
+      message   = [key.size, key, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("CA*QA16NA*")
+      signature = SignatureAlgorithm.sign(@signature_key, message)
       [signature.size, signature, message].pack("CA*A*")
     end
 
@@ -74,18 +53,18 @@ module Vault
     def verify(encrypted_value)
       signature_size, rest = encrypted_value.unpack("CA*")
       signature, message = rest.unpack("A#{signature_size}A*")
-      digest = Digest::SHA1.digest(message)
 
-      @verify_key.sysverify(digest, signature)
+      SignatureAlgorithm.verify(@signature_key, message, signature)
     end
 
     # Decrypt an encrypted value, checking its authenticity with the bucket's verify key
     def decrypt(encrypted_value)
+      raise InvalidCapabilityError, "don't have read capability for this bucket" unless @encryption_key
       raise InvalidSignatureError, "potentially forged data: signature mismatch" unless verify(encrypted_value)
 
       signature_size, rest = encrypted_value.unpack("CA*")
       signature, key_size, rest = rest.unpack("A#{signature_size}CA*")
-      key, timestamp, iv, message_size, ciphertext = rest.unpack("A#{key_size}NA16NA*")
+      key, timestamp, iv, message_size, ciphertext = rest.unpack("A#{key_size}QA16NA*")
 
       # Cast to Time from an integer timestamp
       timestamp = Time.at(timestamp)
@@ -93,7 +72,7 @@ module Vault
       cipher = OpenSSL::Cipher::Cipher.new("aes-256-cbc")
       cipher.decrypt
 
-      cipher.key = @read_key
+      cipher.key = @encryption_key
       cipher.iv  = iv
 
       plaintext = cipher.update(ciphertext)
@@ -110,7 +89,7 @@ module Vault
     def save
       path.mkdir
       path.chmod 0700
-      path.join('verify.key').open('w', 0600) { |f| f << @verify_key.to_der }
+      path.join('verify.key').open('w', 0600) { |f| f << @public_key }
     end
 
     def destroy

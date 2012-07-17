@@ -6,7 +6,8 @@ describe Vault::App do
 
   it "creates buckets" do
     bucket = Vault::Bucket.create
-    post "/#{bucket.id}", :key => bucket.verify_key.to_der
-    last_response.status.should == 201
+    post "/#{bucket.id}", :key => bucket.public_key
+
+    last_response.status.should  == 201
   end
 end
