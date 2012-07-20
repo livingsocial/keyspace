@@ -23,7 +23,9 @@ describe Vault::Bucket do
   end
 
   def with_bucket(&block)
-    bucket = Vault::Bucket.create
+    FileUtils.rm_rf File.expand_path("../../../buckets/test_bucket", __FILE__)
+
+    bucket = Vault::Bucket.create('test_bucket')
     bucket.save
 
     begin
