@@ -1,27 +1,48 @@
 require 'openssl'
 require 'fileutils'
-require 'digest/sha2'
+require 'base32'
 
 module Vault
   class InvalidCapabilityError < ArgumentError; end # potentially forged credentials
   class InvalidSignatureError  < ArgumentError; end # potentially forged data
 
   class Bucket
+    # Size of the AES key used for encrypting contents
+    KEY_SIZE = 256
+
     attr_reader :id, :capabilities, :path
     attr_reader :signature_key, :encryption_key
 
     # Generate a completely new bucket
-    def self.create(name)
+    def self.create(id)
       signature_key  = SignatureAlgorithm.generate_key
-      encryption_key = Vault.random_bytes(32)
+      encryption_key = Vault.random_bytes(KEY_SIZE / 8)
 
-      new(name, signature_key, encryption_key)
+      new(capability_string(id, signature_key, encryption_key))
+    end
+
+    # Capability strings provide a given level of access to a bucket
+    def self.capability_string(id, signature_key, encryption_key)
+      capabilities = 'r'
+      capabilities << 'w' if SignatureAlgorithm.new(signature_key).private_key?
+
+      keys32 = Base32.encode(encryption_key + signature_key).downcase.sub(/=+$/, '')
+      "#{id}:#{capabilities}@#{keys32}"
+    end
+
+    def self.parse_capability_string(capability_string)
+      matches = capability_string.match(/^(\w+):\w+@(.*)/)
+
+      id, keys = matches[1], Base32.decode(matches[2].upcase)
+      encryption_key, signature_key = keys.unpack("a#{KEY_SIZE/8}a*")
+
+      [id, signature_key, encryption_key]
     end
 
     # Instantiate a bucket from its constituent keys
-    def initialize(id, signature_key, encryption_key = nil)
-      @id, @signature_key, @encryption_key = id, signature_key, encryption_key
-      @signer = SignatureAlgorithm.new(signature_key)
+    def initialize(capability_string)
+      @id, @signature_key, @encryption_key = self.class.parse_capability_string(capability_string)
+      @signer = SignatureAlgorithm.new(@signature_key)
     end
 
     # Obtain the public key for this bucket
@@ -30,7 +51,7 @@ module Vault
     end
 
     # Encrypt a key/value pair for insertion into the vault
-    # Key is not a cryptographic key, but a human meaningful name that this
+    # Key is not a cryptographic key, but a human meaningful id that this
     # data should be associated with
     def encrypt(key, value, timestamp = Time.now)
       raise InvalidCapabilityError, "don't have write capability" unless @signer.private_key?
@@ -84,7 +105,7 @@ module Vault
     end
 
     def inspect
-      "#<#{self.class} #{@id} [#{@capabilities.join(' ')}]}>"
+      "#<#{self.class} #{self.class.capability_string(id, signature_key, encryption_key)}>"
     end
 
     # Save a newly created bucket to disk
