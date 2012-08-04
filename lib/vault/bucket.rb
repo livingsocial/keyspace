@@ -1,48 +1,24 @@
 require 'openssl'
 require 'fileutils'
-require 'base32'
 
 module Vault
   class InvalidCapabilityError < ArgumentError; end # potentially forged credentials
   class InvalidSignatureError  < ArgumentError; end # potentially forged data
 
   class Bucket
-    # Size of the AES key used for encrypting contents
-    KEY_SIZE = 256
+    extend Forwardable
+    def_delegators :@capability, :id, :signature_key, :encryption_key, :capabilities
 
-    attr_reader :id, :capabilities, :path
-    attr_reader :signature_key, :encryption_key
 
     # Generate a completely new bucket
     def self.create(id)
-      signature_key  = SignatureAlgorithm.generate_key
-      encryption_key = Vault.random_bytes(KEY_SIZE / 8)
-
-      new(capability_string(id, signature_key, encryption_key))
+      new(Vault::Capability.generate(id).to_s)
     end
 
-    # Capability strings provide a given level of access to a bucket
-    def self.capability_string(id, signature_key, encryption_key)
-      capabilities = 'r'
-      capabilities << 'w' if SignatureAlgorithm.new(signature_key).private_key?
-
-      keys32 = Base32.encode(encryption_key + signature_key).downcase.sub(/=+$/, '')
-      "#{id}:#{capabilities}@#{keys32}"
-    end
-
-    def self.parse_capability_string(capability_string)
-      matches = capability_string.match(/^(\w+):\w+@(.*)/)
-
-      id, keys = matches[1], Base32.decode(matches[2].upcase)
-      encryption_key, signature_key = keys.unpack("a#{KEY_SIZE/8}a*")
-
-      [id, signature_key, encryption_key]
-    end
-
-    # Instantiate a bucket from its constituent keys
+    # Load a bucket from a capability stringd
     def initialize(capability_string)
-      @id, @signature_key, @encryption_key = self.class.parse_capability_string(capability_string)
-      @signer = SignatureAlgorithm.new(@signature_key)
+      @capability = Capability.parse(capability_string)
+      @signer = SignatureAlgorithm.new(@capability.signature_key)
     end
 
     # Obtain the public key for this bucket
@@ -60,7 +36,7 @@ module Vault
       cipher = OpenSSL::Cipher::Cipher.new("aes-256-cbc")
       cipher.encrypt
 
-      cipher.key = @encryption_key
+      cipher.key = encryption_key
       cipher.iv  = iv = cipher.random_iv
 
       ciphertext =  cipher.update(value)
@@ -82,7 +58,7 @@ module Vault
 
     # Decrypt an encrypted value, checking its authenticity with the bucket's verify key
     def decrypt(encrypted_value)
-      raise InvalidCapabilityError, "don't have read capability for this bucket" unless @encryption_key
+      raise InvalidCapabilityError, "don't have read capability for this bucket" unless encryption_key
       raise InvalidSignatureError, "potentially forged data: signature mismatch" unless verify(encrypted_value)
 
       signature_size, rest = encrypted_value.unpack("CA*")
@@ -95,7 +71,7 @@ module Vault
       cipher = OpenSSL::Cipher::Cipher.new("aes-256-cbc")
       cipher.decrypt
 
-      cipher.key = @encryption_key
+      cipher.key = encryption_key
       cipher.iv  = iv
 
       plaintext = cipher.update(ciphertext)
@@ -120,7 +96,7 @@ module Vault
     end
 
     def path
-      @path ||= Vault.bucket_path.join(@id)
+      @path ||= Vault.bucket_path.join(id)
     end
   end
 end
