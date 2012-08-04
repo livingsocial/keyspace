@@ -15,7 +15,7 @@ module Vault
       new(Vault::Capability.generate(id).to_s)
     end
 
-    # Load a bucket from a capability stringd
+    # Load a bucket from a capability string
     def initialize(capability_string)
       @capability = Capability.parse(capability_string)
     end
