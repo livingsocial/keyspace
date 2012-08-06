@@ -1,5 +1,5 @@
 require 'bundler/setup'
-require 'vault'
+require 'vault/server'
 require 'sinatra'
 require 'rack/test'
 

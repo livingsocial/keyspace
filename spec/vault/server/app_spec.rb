@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'vault/app'
 
 describe Vault::App do
   let(:app)    { subject }

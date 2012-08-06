@@ -2,7 +2,6 @@ require 'pathname'
 require 'openssl'
 require 'vault/version'
 
-require 'vault/bucket'
 require 'vault/capability'
 require 'vault/signature_algorithm'
 
