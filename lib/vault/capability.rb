@@ -54,7 +54,7 @@ module Vault
       raise InvalidCapabilityError, "don't have write capability" unless @signer.private_key?
       raise ArgumentError, "key too long" if key.size > 0xFF
 
-      cipher = OpenSSL::Cipher::Cipher.new("aes-256-cbc")
+      cipher = OpenSSL::Cipher::Cipher.new(SYMMETRIC_CIPHER)
       cipher.encrypt
 
       cipher.key = encryption_key
