@@ -15,4 +15,16 @@ describe Vault::Capability do
     value.should eq example_value
     date.utc.to_i.should eq example_date.utc.to_i
   end
+
+  it "degrades writecaps to verifycaps" do
+    subject.should be_writecap
+    subject.should be_readcap
+    subject.should_not be_verifycap
+
+    verifycap = subject.degrade(:verify)
+
+    verifycap.should_not be_writecap
+    verifycap.should_not be_readcap
+    verifycap.should be_verifycap
+  end
 end

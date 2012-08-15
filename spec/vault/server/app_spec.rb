@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Vault::App do
+describe Vault::Server::App do
   let(:app)    { subject }
   let(:bucket_id) { 'test_bucket' }
 
@@ -9,8 +9,8 @@ describe Vault::App do
   end
 
   it "creates buckets" do
-    bucket = Vault::Bucket.create(bucket_id)
-    post "/#{bucket.id}", :key => bucket.public_key
+    bucket = Vault::Client::Bucket.create(bucket_id)
+    post "/buckets", :verifycap => bucket.verifycap
 
     last_response.status.should  == 201
   end

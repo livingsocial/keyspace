@@ -1,18 +1,14 @@
 require 'sinatra'
 
 module Vault
-  class App < Sinatra::Base
-    post '/:id' do
-      halt 400, "no key given" unless params[:key]
+  module Server
+    class App < Sinatra::Base
+      post '/buckets' do
+        halt 400, "no verifycap given" unless params[:verifycap]
 
-      begin
-        bucket = Bucket.new(params[:id], params[:key])
-        bucket.save
-      rescue => ex
-        p ex
+        Bucket.create(params[:verifycap])
+        201
       end
-
-      201
     end
   end
 end

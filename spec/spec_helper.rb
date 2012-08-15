@@ -1,6 +1,6 @@
 require 'bundler/setup'
+require 'vault/client'
 require 'vault/server'
-require 'sinatra'
 require 'rack/test'
 
 set :environment, :test

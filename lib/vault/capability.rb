@@ -1,6 +1,12 @@
 require 'base32'
 
 module Vault
+  # Something requires a capability we don't have
+  class InvalidCapabilityError < StandardError; end
+
+  # Potentially forged data: data does not match signature
+  class InvalidSignatureError < StandardError; end
+
   # Capabilities provide access to encrypted data
   class Capability
     attr_reader :id, :signature_key, :encryption_key, :capabilities
@@ -13,11 +19,18 @@ module Vault
       new(id, signature_key, encryption_key)
     end
 
+    # Parse a capability token into a capability object
     def self.parse(capability_string)
-      matches = capability_string.match(/^(\w+):\w+@(.*)/)
+      matches = capability_string.to_s.match(/^(\w+):(\w+)@(.*)/)
+      id, caps, keys = matches[1], matches[2], Base32.decode(matches[3].upcase)
 
-      id, keys = matches[1], Base32.decode(matches[2].upcase)
-      encryption_key, signature_key = keys.unpack("a#{SYMMETRIC_KEY_SIZE/8}a*")
+      case caps
+      when 'r', 'rw'
+        encryption_key, signature_key = keys.unpack("a#{SYMMETRIC_KEY_SIZE/8}a*")
+      when 'v'
+        encryption_key, signature_key = nil, keys
+      else raise ArgumentError, "invalid capability level: #{caps}"
+      end
 
       new(id, signature_key, encryption_key)
     end
@@ -26,13 +39,12 @@ module Vault
       @id, @signature_key, @encryption_key = id, signature_key, encryption_key
       @signer = SignatureAlgorithm.new(signature_key)
 
-      @capabilities = 'r'
-      @capabilities << 'w' if SignatureAlgorithm.new(signature_key).private_key?
-    end
-
-    # TODO: replace this with a proper capability degrading method
-    def public_key
-      @signer.public_key
+      if encryption_key
+        @capabilities = 'r'
+        @capabilities << 'w' if @signer.private_key?
+      else
+        @capabilities = 'v'
+      end
     end
 
     # Encrypt a key/value pair for insertion into the vault
@@ -67,7 +79,7 @@ module Vault
 
     # Decrypt an encrypted value, checking its authenticity with the bucket's verify key
     def decrypt(encrypted_value)
-      raise InvalidCapabilityError, "don't have read capability for this bucket" unless encryption_key
+      raise InvalidCapabilityError, "don't have read capability" unless encryption_key
       raise InvalidSignatureError, "potentially forged data: signature mismatch" unless verify(encrypted_value)
 
       signature_size, rest = encrypted_value.unpack("CA*")
@@ -89,9 +101,38 @@ module Vault
       [key, plaintext, timestamp]
     end
 
+    # Degrade this capability to a lower level
+    def degrade(new_capability)
+      case new_capability
+      when :r, :read, :readcap
+        raise InvalidCapabilityError, "don't have read capability"
+        self.class.new(@id, @signer.public_key, @encryption_key)
+      when :v, :verify, :verifycap
+        self.class.new(@id, @signer.public_key)
+      else raise ArgumentError, "invalid capability: #{new_capability}"
+      end
+    end
+
+    # Is this a write capability?
+    def writecap?
+      @capabilities['w']
+    end
+
+    # Is this a read capability?
+    def readcap?
+      @capabilities['r']
+    end
+
+    # Is this a verify capability?
+    def verifycap?
+      @capabilities['v']
+    end
+
+    # Generate a token out of this capability
     def to_s
-      keys32 = Base32.encode(encryption_key + signature_key).downcase.sub(/=+$/, '')
-      "#{id}:#{capabilities}@#{keys32}"
+      keys = encryption_key ? encryption_key + signature_key : signature_key
+      keys32 = Base32.encode(keys).downcase.sub(/=+$/, '')
+      "#{id}:#{capabilities || 'v'}@#{keys32}"
     end
 
     def inspect

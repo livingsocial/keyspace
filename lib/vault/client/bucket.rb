@@ -1,14 +1,14 @@
 require 'forwardable'
 
 module Vault
-  module Server
+  module Client
     class Bucket
       extend Forwardable
       def_delegators :@capability, :id, :capabilities
 
       # Generate a completely new bucket
-      def self.create(verifycap)
-        new(verifycap)
+      def self.create(id)
+        new(Vault::Capability.generate(id).to_s)
       end
 
       # Load a bucket from a capability string
@@ -18,6 +18,11 @@ module Vault
 
       def inspect
         "#<#{self.class} #{id} #{@capability}>"
+      end
+
+      # Obtain the verifycap for this bucket
+      def verifycap
+        @capability.degrade(:verify)
       end
     end
   end

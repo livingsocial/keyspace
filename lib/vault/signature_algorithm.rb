@@ -15,7 +15,7 @@ module Vault
 
     def initialize(key)
       @key = OpenSSL::PKey::EC.new(key)
-      @key.public_key = key unless @key.private_key?
+      #@key.public_key = OpenSSL::PKey::EC::Point.new(key) unless @key.private_key?
     end
 
     def private_key?; @key.private_key?; end
