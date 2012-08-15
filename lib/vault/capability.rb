@@ -58,7 +58,7 @@ module Vault
     # data should be associated with
     def encrypt(key, value, timestamp = Time.now)
       raise InvalidCapabilityError, "don't have write capability" unless @signer.private_key?
-      raise ArgumentError, "key too long" if key.size > 0xFF
+      raise ArgumentError, "key too long" if key.size > SYMMETRIC_KEY_SIZE
 
       cipher = OpenSSL::Cipher::Cipher.new(SYMMETRIC_CIPHER)
       cipher.encrypt
