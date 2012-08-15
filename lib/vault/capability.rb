@@ -9,6 +9,12 @@ module Vault
 
   # Capabilities provide access to encrypted data
   class Capability
+    # Use AES256 with CBC padding
+    SYMMETRIC_CIPHER = "aes-256-cbc"
+
+    # Size of the symmetric key used for encrypting contents
+    SYMMETRIC_KEY_SIZE = 256
+
     attr_reader :id, :signature_key, :encryption_key, :capabilities
 
     # Generate a brand new capability. Note: id is not authenticated
