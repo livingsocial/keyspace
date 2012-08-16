@@ -6,9 +6,15 @@ module Vault
       extend Forwardable
       def_delegators :@capability, :id, :capabilities
 
-      # Generate a completely new bucket
-      def self.create(verifycap)
-        new(verifycap)
+      class << self
+        # Persistence layer for buckets
+        attr_accessor :store
+
+        # Generate a completely new bucket
+        def create(verifycap)
+          store.create(verifycap)
+          new(verifycap)
+        end
       end
 
       # Load a bucket from a capability string
