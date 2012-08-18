@@ -15,6 +15,9 @@ module Vault
     # Size of the symmetric key used for encrypting contents
     SYMMETRIC_KEY_SIZE = 256
 
+    # Maximum length of a key (as in key/value pair) name
+    MAX_KEY_LENGTH = 256
+
     attr_reader :id, :signature_key, :encryption_key, :capabilities
 
     # Generate a brand new capability. Note: id is not authenticated
@@ -58,7 +61,7 @@ module Vault
     # data should be associated with
     def encrypt(key, value, timestamp = Time.now)
       raise InvalidCapabilityError, "don't have write capability" unless @signer.private_key?
-      raise ArgumentError, "key too long" if key.size > SYMMETRIC_KEY_SIZE
+      raise ArgumentError, "key too long" if key.to_s.size > MAX_KEY_LENGTH
 
       cipher = OpenSSL::Cipher::Cipher.new(SYMMETRIC_CIPHER)
       cipher.encrypt
@@ -70,7 +73,7 @@ module Vault
       ciphertext << cipher.final
 
       # TODO: hash/encrypt key
-      message   = [key.size, key, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("CA*QA16NA*")
+      message   = [key.size, key.to_s, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("CA*QA16NA*")
       signature = @signer.sign(message)
       [signature.size, signature, message].pack("Ca*a*")
     end

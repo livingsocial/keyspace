@@ -12,14 +12,29 @@ module Vault
 
         # Generate a completely new bucket
         def create(verifycap)
+          # TODO: check for existing buckets
           store.create(verifycap)
-          new(verifycap)
+          new verifycap
+        end
+
+        # Find an existing bucket by its ID
+        def get(bucket_id)
+          new store.verifycap(bucket_id)
         end
       end
 
       # Load a bucket from a capability string
       def initialize(capability_string)
         @capability = Capability.parse(capability_string)
+      end
+
+      # Store an encrypted value in this bucket
+      def set(ciphertext)
+        if @capability.verify(ciphertext)
+          self.class.store.set(ciphertext)
+        else
+          raise InvalidSignatureError, "potentially forged data: signature mismatch"
+        end
       end
 
       def inspect
