@@ -18,6 +18,7 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency 'thor'
   gem.add_runtime_dependency 'sinatra'
   gem.add_runtime_dependency 'base32'
+  gem.add_runtime_dependency 'redis'
 
   gem.add_development_dependency 'rake'
   gem.add_development_dependency 'rspec'
