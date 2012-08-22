@@ -24,8 +24,8 @@ describe Vault::Server::Bucket do
     bucket_store.should_receive(:verifycap).and_return(verifycap)
     bucket = Vault::Server::Bucket.get(example_bucket)
 
-    # FIXME: BOGUS! Need to implement the real behavior here
-    bucket_store.should_receive(:set).with(ciphertext)
-    bucket.set(ciphertext)
+    # FIXME: BOGUS! Need to implement the real arguments (bucket, key, value)
+    bucket_store.should_receive(:put).with(ciphertext)
+    bucket.put(ciphertext)
   end
 end

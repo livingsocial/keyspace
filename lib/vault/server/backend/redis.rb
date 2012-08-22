@@ -34,7 +34,7 @@ module Vault
         # Put a value in a bucket
         # No verification of authenticity is performed as it should be
         # performed by Vault::Server prior to storage
-        def set(bucket, key, value)
+        def put(bucket, key, value)
           @redis.set value_key(bucket, key), value
         end
 

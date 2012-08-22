@@ -14,7 +14,7 @@ describe Vault::Server::Backend::Redis do
 
   it "stores data in buckets" do
     subject.create example_verifycap
-    subject.set(example_bucket, example_key, example_value)
+    subject.put(example_bucket, example_key, example_value)
     subject.get(example_bucket, example_key).should == example_value
   end
 end

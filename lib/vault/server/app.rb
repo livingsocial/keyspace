@@ -1,4 +1,5 @@
 require 'sinatra'
+require 'vault/server'
 
 module Vault
   module Server
@@ -8,6 +9,14 @@ module Vault
 
         Bucket.create(params[:verifycap])
         201
+      end
+
+      put '/buckets/:bucket' do
+        bucket = Bucket.get(params[:bucket])
+        body   = request.body.read
+
+        bucket.put(body)
+        200
       end
     end
   end

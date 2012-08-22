@@ -4,8 +4,8 @@ module Vault
   class CLI < Thor
     desc :server, "Start the Vault server"
     def server
-      require 'vault/app'
-      App.run!
+      require 'vault/server/app'
+      Server::App.run!
     end
   end
 end

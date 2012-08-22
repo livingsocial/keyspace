@@ -29,9 +29,9 @@ module Vault
       end
 
       # Store an encrypted value in this bucket
-      def set(ciphertext)
+      def put(ciphertext)
         if @capability.verify(ciphertext)
-          self.class.store.set(ciphertext)
+          self.class.store.put(ciphertext)
         else
           raise InvalidSignatureError, "potentially forged data: signature mismatch"
         end
