@@ -19,6 +19,16 @@ module Vault
           @redis.set verifycap_key(verifycap.id), verifycap
         end
 
+        # Delete a bucket
+        def delete(bucket_id)
+          verifycap_key = verifycap_key(bucket_id)
+          verifycap = @redis.get verifycap_key
+          raise BucketNotFoundError, "no such bucket: #{bucket_id}" unless verifycap
+
+          # TODO: delete bucket contents
+          @redis.del verifycap_key
+        end
+
         # Obtain the stored verifycap for a given bucket
         def verifycap(bucket_id)
           @redis.get verifycap_key(bucket_id)

@@ -1,4 +1,5 @@
 require 'forwardable'
+require 'net/http'
 
 module Vault
   module Client
@@ -23,6 +24,21 @@ module Vault
       # Obtain the verifycap for this bucket
       def verifycap
         @capability.degrade(:verify)
+      end
+
+      # Save this bucket to the server
+      def save
+        uri = URI(Vault::Client.url)
+        uri.path = "/buckets"
+
+        response = Net::HTTP.post_form(uri, :verifycap => verifycap)
+        response.code == 201
+      end
+
+      # Save this bucket and raise an exception if the save fails
+      def save!
+        raise "couldn't save bucket: #{response.code} #{response.message}" unless save
+        true
       end
     end
   end
