@@ -1,6 +1,6 @@
 require 'bundler/setup'
-require 'vault/client'
-require 'vault/server'
+require 'keyspace/client'
+require 'keyspace/server'
 require 'rack/test'
 
 set :environment, :test

@@ -1,20 +1,20 @@
 require 'spec_helper'
 
-describe Vault::Server::App do
+describe Keyspace::Server::App do
   let(:app)            { subject }
   let(:example_bucket) { 'foobar' }
   let(:example_key)    { 'baz' }
   let(:example_value)  { 'quux' }
   let(:bucket_store)   { mock(:store) }
-  let(:writecap)       { Vault::Capability.generate(example_bucket) }
+  let(:writecap)       { Keyspace::Capability.generate(example_bucket) }
   let(:verifycap)      { writecap.degrade(:verify) }
 
   before :each do
-    Vault::Server::Bucket.store = bucket_store
+    Keyspace::Server::Bucket.store = bucket_store
   end
 
   it "creates buckets" do
-    bucket = Vault::Client::Bucket.create(example_bucket)
+    bucket = Keyspace::Client::Bucket.create(example_bucket)
     bucket_store.should_receive(:create).with(bucket.verifycap.to_s)
 
     post "/buckets", :verifycap => bucket.verifycap

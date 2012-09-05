@@ -1,12 +1,12 @@
 require 'spec_helper'
 
-describe Vault::Server::Backend::Redis do
-  subject { Vault::Server::Backend::Redis.new(::Redis.new(:db => 10))}
+describe Keyspace::Server::Backend::Redis do
+  subject { Keyspace::Server::Backend::Redis.new(::Redis.new(:db => 10))}
 
   let(:example_bucket)    { :foobar }
   let(:example_key)       { :baz }
   let(:example_value)     { 'quux' }
-  let(:example_verifycap) { Vault::Capability.generate(example_bucket).degrade(:verify) }
+  let(:example_verifycap) { Keyspace::Capability.generate(example_bucket).degrade(:verify) }
 
   it "creates buckets from verifycaps" do
     subject.create example_verifycap
@@ -15,7 +15,7 @@ describe Vault::Server::Backend::Redis do
   it "deletes buckets" do
     subject.create example_verifycap
     expect { subject.delete example_bucket }.to_not raise_exception
-    expect { subject.delete example_bucket }.to raise_exception(Vault::BucketNotFoundError)
+    expect { subject.delete example_bucket }.to raise_exception(Keyspace::BucketNotFoundError)
   end
 
   it "stores data in buckets" do

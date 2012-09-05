@@ -1,5 +1,5 @@
-Vault
-=====
+Keyspace
+========
 
 Vault is an encrypted key/value store which emphasizes a "least authority"
 philosophy for information sharing. All data is stored as encrypted key/value

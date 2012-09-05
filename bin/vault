@@ -1,6 +1,0 @@
-#!/usr/bin/env ruby
-
-require 'vault'
-require 'vault/cli'
-
-Vault::CLI.start(ARGV)

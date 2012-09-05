@@ -1,6 +1,6 @@
 require 'redis'
 
-module Vault
+module Keyspace
   module Server
     module Backend
       class Redis
@@ -36,14 +36,14 @@ module Vault
 
         # Retrieve a value from the bucket
         # No verification of authenticity is performed as it should be
-        # performed by Vault::Server prior to storage
+        # performed by Keyspace::Server prior to storage
         def get(bucket, key)
           @redis.get value_key(bucket, key)
         end
 
         # Put a value in a bucket
         # No verification of authenticity is performed as it should be
-        # performed by Vault::Server prior to storage
+        # performed by Keyspace::Server prior to storage
         def put(bucket, key, value)
           @redis.set value_key(bucket, key), value
         end

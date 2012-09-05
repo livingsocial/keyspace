@@ -1,6 +1,6 @@
 require 'openssl'
 
-module Vault
+module Keyspace
   # Pubkey signature algorithm (ECDSA)
   class SignatureAlgorithm
     # "128-bit" equivalent security with 512-bit (64-byte) signatures

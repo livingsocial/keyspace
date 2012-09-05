@@ -1,11 +1,11 @@
 require 'pathname'
 require 'openssl'
-require 'vault/version'
+require 'keyspace/version'
 
-require 'vault/capability'
-require 'vault/signature_algorithm'
+require 'keyspace/capability'
+require 'keyspace/signature_algorithm'
 
-module Vault
+module Keyspace
   # Couldn't find the requested bucket
   class BucketNotFoundError < StandardError; end
 

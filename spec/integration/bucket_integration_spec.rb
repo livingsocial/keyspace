@@ -6,14 +6,14 @@ describe "Bucket integration" do
   let(:example_bucket) { :foobar }
 
   before :all do
-    Vault::Server::Bucket.store = Vault::Server::Backend::Redis.new(Redis.new(:db => 10))
+    Keyspace::Server::Bucket.store = Keyspace::Server::Backend::Redis.new(Redis.new(:db => 10))
 
-    Vault::Server::App.set(:port, example_port)
-    @thread = Thread.new { Vault::Server::App.run! }
-    sleep 0.1 # hax!
+    Keyspace::Server::App.set(:port, example_port)
+    @thread = Thread.new { Keyspace::Server::App.run! }
+    sleep 0.5 # hax!
     Thread.pass until @thread.status && @thread.status == "sleep"
 
-    Vault::Client.url = example_url
+    Keyspace::Client.url = example_url
   end
 
   after :all do
@@ -23,11 +23,11 @@ describe "Bucket integration" do
   it "creates buckets" do
     # Ensure there's no bucket left over in Redis
     begin
-      Vault::Server::Bucket.delete(example_bucket)
-    rescue Vault::BucketNotFoundError
+      Keyspace::Server::Bucket.delete(example_bucket)
+    rescue Keyspace::BucketNotFoundError
     end
 
-    Vault::Client::Bucket.create(example_bucket).save
-    Vault::Server::Bucket.get(example_bucket).should be_a Vault::Server::Bucket
+    Keyspace::Client::Bucket.create(example_bucket).save
+    Keyspace::Server::Bucket.get(example_bucket).should be_a Keyspace::Server::Bucket
   end
 end

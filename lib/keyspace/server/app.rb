@@ -1,7 +1,7 @@
 require 'sinatra'
-require 'vault/server'
+require 'keyspace/server'
 
-module Vault
+module Keyspace
   module Server
     class App < Sinatra::Base
       post '/buckets' do

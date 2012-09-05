@@ -1,6 +1,6 @@
 require 'forwardable'
 
-module Vault
+module Keyspace
   module Server
     class Bucket
       extend Forwardable

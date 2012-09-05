@@ -1,6 +1,6 @@
 require 'base32'
 
-module Vault
+module Keyspace
   # Something requires a capability we don't have
   class InvalidCapabilityError < StandardError; end
 
@@ -23,7 +23,7 @@ module Vault
     # Generate a brand new capability. Note: id is not authenticated
     def self.generate(id)
       signature_key  = SignatureAlgorithm.generate_key
-      encryption_key = Vault.random_bytes(SYMMETRIC_KEY_SIZE / 8)
+      encryption_key = Keyspace.random_bytes(SYMMETRIC_KEY_SIZE / 8)
 
       new(id, signature_key, encryption_key)
     end
@@ -56,7 +56,7 @@ module Vault
       end
     end
 
-    # Encrypt a key/value pair for insertion into the vault
+    # Encrypt a key/value pair for insertion into Keyspace
     # Key is not a cryptographic key, but a human meaningful id that this
     # data should be associated with
     def encrypt(key, value, timestamp = Time.now)

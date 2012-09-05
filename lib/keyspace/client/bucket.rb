@@ -1,7 +1,7 @@
 require 'forwardable'
 require 'net/http'
 
-module Vault
+module Keyspace
   module Client
     class Bucket
       extend Forwardable
@@ -9,7 +9,7 @@ module Vault
 
       # Generate a completely new bucket
       def self.create(id)
-        new(Vault::Capability.generate(id).to_s)
+        new(Keyspace::Capability.generate(id).to_s)
       end
 
       # Load a bucket from a capability string
@@ -28,7 +28,7 @@ module Vault
 
       # Save this bucket to the server
       def save
-        uri = URI(Vault::Client.url)
+        uri = URI(Keyspace::Client.url)
         uri.path = "/buckets"
 
         response = Net::HTTP.post_form(uri, :verifycap => verifycap)
