@@ -1,12 +1,12 @@
 Keyspace
 ========
 
-Vault is an encrypted key/value store which emphasizes a "least authority"
+Keyspace is an encrypted key/value store which emphasizes a "least authority"
 philosophy for information sharing. All data is stored as encrypted key/value
 pairs, and data can be organized into "buckets" (ala Amazon S3) which each
 have independent encryption tokens and access control.
 
-Vault uses the capability access control model to manage access to buckets.
+Keyspace uses the capability access control model to manage access to buckets.
 Each capability takes the form of cryptographic tokens which are unique to a
 particular bucket. Knowledge of these tokens is necessary and sufficient to
 gain access to a particular bucket. Such an access scheme is known as
@@ -41,12 +41,22 @@ their capability token. Users can also degrade capabilities, i.e. they can
 produce read-verify tokens from a write-read-verify token, and verify only
 tokens from a read-verify token (or write-read-verify token).
 
+Data Flow
+---------
+
+![Data Flow Diagram](http://code.livingsocial.net/tarcieri/keyspace/raw/master/dataflow.png)
+
+Keyspace provides a separation between the powers of system administrators
+to alter the system configuration, system users who want to consume and verify
+the authenticity of configuration data, and the server, which is a dumb
+datastore which will save any values it can verify.
+
 Server
 ------
 
-Vault provides a Sinatra service for writing to and reading from buckets. The
+Keyspace provides a Sinatra service for writing to and reading from buckets. The
 Sinatra service itself has only the verify capability, meaning that if it is
-ever compromised, the attacker cannot read the contents of the Vault.
+ever compromised, the attacker cannot read the contents of the Keyspace.
 Furthermore, they cannot alter the system configuration, because they will be
 unable to sign new values without the writecap.
 
@@ -59,5 +69,5 @@ capabilities.
 Suggested Reading
 -----------------
 
-Vault is inspired by the cryptographic capabilities system implemented in
+Keyspace is inspired by the cryptographic capabilities system implemented in
 [Tahoe: The Least Authority Filesystem](https://tahoe-lafs.org/~zooko/lafs.pdf).
