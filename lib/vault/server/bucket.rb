@@ -19,7 +19,15 @@ module Vault
 
         # Find an existing bucket by its ID
         def get(bucket_id)
-          new store.verifycap(bucket_id)
+          verifycap = store.verifycap(bucket_id)
+          raise BucketNotFoundError, "no such bucket: #{bucket_id}" unless verifycap
+
+          new(verifycap)
+        end
+
+        # Delete a bucket by its ID
+        def delete(bucket_id)
+          store.delete(bucket_id)
         end
       end
 

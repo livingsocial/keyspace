@@ -18,6 +18,11 @@ describe Vault::Server::Bucket do
     Vault::Server::Bucket.create(verifycap).should be_a Vault::Server::Bucket
   end
 
+  it "deletes buckets" do
+    bucket_store.should_receive(:delete).with(example_bucket)
+    Vault::Server::Bucket.delete(example_bucket)
+  end
+
   it "stores encrypted data in buckets" do
     ciphertext = writecap.encrypt(example_key, example_value)
 
