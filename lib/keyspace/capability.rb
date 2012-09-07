@@ -114,7 +114,7 @@ module Keyspace
     def degrade(new_capability)
       case new_capability
       when :r, :read, :readcap
-        raise InvalidCapabilityError, "don't have read capability"
+        raise InvalidCapabilityError, "don't have read capability" unless @encryption_key
         self.class.new(@id, @signer.public_key, @encryption_key)
       when :v, :verify, :verifycap
         self.class.new(@id, @signer.public_key)
@@ -134,7 +134,7 @@ module Keyspace
 
     # Is this a verify capability?
     def verifycap?
-      @capabilities['v']
+      @capabilities.include?('r') || @capabilities.include?('v')
     end
 
     # Generate a token out of this capability
