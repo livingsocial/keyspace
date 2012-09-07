@@ -20,7 +20,7 @@ module Keyspace
       end
 
       def inspect
-        "#<#{self.class} #{id} #{@capability}>"
+        "#<#{self.class} #{@capability}>"
       end
 
       # Obtain the verifycap for this bucket
