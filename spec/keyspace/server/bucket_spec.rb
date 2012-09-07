@@ -1,8 +1,8 @@
 require 'spec_helper'
 
 describe Keyspace::Server::Bucket do
-  let(:example_bucket) { :foobar }
-  let(:example_key)    { :baz }
+  let(:example_bucket) { 'foobar' }
+  let(:example_key)    { 'baz' }
   let(:example_value)  { 'quux' }
 
   let(:writecap)       { Keyspace::Capability.generate(example_bucket) }
@@ -29,8 +29,16 @@ describe Keyspace::Server::Bucket do
     bucket_store.should_receive(:verifycap).and_return(verifycap)
     bucket = Keyspace::Server::Bucket.get(example_bucket)
 
-    # FIXME: BOGUS! Need to implement the real arguments (bucket, key, value)
-    bucket_store.should_receive(:put).with(ciphertext)
+    bucket_store.should_receive(:put).with(example_bucket, example_key, ciphertext)
     bucket.put(ciphertext)
+  end
+
+  it "retrieves encrypted data from buckets" do
+    bucket_store.should_receive(:verifycap).and_return(verifycap)
+    bucket = Keyspace::Server::Bucket.get(example_bucket)
+
+    ciphertext = writecap.encrypt(example_key, example_value)
+    bucket_store.should_receive(:get).with(example_bucket, example_key).and_return ciphertext
+    bucket.get(example_key).should == ciphertext
   end
 end

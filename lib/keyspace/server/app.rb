@@ -11,6 +11,14 @@ module Keyspace
         201
       end
 
+      get '/buckets/:bucket/:key' do
+        bucket = Bucket.get(params[:bucket])
+        ciphertext = bucket.get(params[:key])
+        halt 404 unless ciphertext
+
+        [200, {"Content-Type" => Keyspace::MIME_TYPE}, ciphertext]
+      end
+
       put '/buckets/:bucket' do
         bucket = Bucket.get(params[:bucket])
         body   = request.body.read

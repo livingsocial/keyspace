@@ -6,8 +6,17 @@ require 'keyspace/capability'
 require 'keyspace/signature_algorithm'
 
 module Keyspace
+  # Generic errors surrounding buckets
+  class BucketError < StandardError; end
+
   # Couldn't find the requested bucket
-  class BucketNotFoundError < StandardError; end
+  class BucketNotFoundError < BucketError; end
+
+  # Couldn't find the requested key
+  class KeyNotFoundError < BucketError; end
+
+  # MIME type used for bucket values
+  MIME_TYPE = "application/octet-stream"
 
   def self.bucket_path
     @bucket_path ||= Pathname.new File.expand_path('../../buckets', __FILE__)

@@ -36,14 +36,26 @@ module Keyspace
         @capability = Capability.parse(capability_string)
       end
 
+      # Retrieve an encrypted value from a bucket
+      def get(key)
+        self.class.store.get(id, key.to_s)
+      end
+      alias_method :[], :get
+
       # Store an encrypted value in this bucket
       def put(ciphertext)
         if @capability.verify(ciphertext)
-          self.class.store.put(ciphertext)
+          # TODO: encapsulate this logic somewhere better (in Capability perhaps?)
+          signature_size, rest = ciphertext.unpack("CA*")
+          signature, key_size, rest = rest.unpack("a#{signature_size}Ca*")
+          key = rest[0...key_size]
+
+          self.class.store.put(id, key, ciphertext)
         else
           raise InvalidSignatureError, "potentially forged data: signature mismatch"
         end
       end
+      alias_method :[]=, :put
 
       def inspect
         "#<#{self.class} #{id} #{@capability}>"
