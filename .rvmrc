@@ -1,1 +1,1 @@
-rvm 1.9.3@vault --create
+rvm 1.9.3@keyspace --create
