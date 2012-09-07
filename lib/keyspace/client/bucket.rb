@@ -41,6 +41,8 @@ module Keyspace
         if response.code == "200"
           key, value, timestamp = @capability.decrypt(response.body)
           value
+        elsif response.code == "404"
+          nil
         else raise KeyNotFoundError, "couldn't get key: #{response.code} #{response.message}"
         end
       end

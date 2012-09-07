@@ -12,7 +12,12 @@ module Keyspace
       end
 
       get '/buckets/:bucket/:key' do
-        bucket = Bucket.get(params[:bucket])
+        begin
+          bucket = Bucket.get(params[:bucket])
+        rescue Keyspace::BucketNotFoundError
+          halt 404
+        end
+
         ciphertext = bucket.get(params[:key])
         halt 404 unless ciphertext
 
@@ -20,7 +25,12 @@ module Keyspace
       end
 
       put '/buckets/:bucket' do
-        bucket = Bucket.get(params[:bucket])
+        begin
+          bucket = Bucket.get(params[:bucket])
+        rescue Keyspace::BucketNotFoundError
+          halt 404
+        end
+
         body   = request.body.read
 
         bucket.put(body)
