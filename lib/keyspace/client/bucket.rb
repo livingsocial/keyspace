@@ -4,6 +4,8 @@ require 'net/http'
 module Keyspace
   module Client
     class Bucket
+      attr_reader :capability
+
       extend Forwardable
       def_delegators :@capability, :id, :capabilities
 
