@@ -72,7 +72,9 @@ module Keyspace
             true
           else raise BucketError, "couldn't save bucket: #{response.code} #{response.message}"
           end
-        else
+        end
+
+        if !@changes.empty?
           uri.path = "/buckets/#{id}"
 
           # TODO: real bulk API
@@ -90,8 +92,10 @@ module Keyspace
             end
           end
 
-          true
+          @changes = {}
         end
+
+        true
       end
 
       # Save this bucket to the server
