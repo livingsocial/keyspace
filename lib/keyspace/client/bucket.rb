@@ -53,7 +53,7 @@ module Keyspace
       def put(key, value)
         if @capability.writecap?
           @changes[key] = value
-        else raise InvalidCapabilityError, "don't have write capability for this bucket: #{id}"
+        else raise InvalidCapabilityError, "don't have write capability for this bucket"
         end
       end
       alias_method :[]=, :put
