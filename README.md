@@ -66,6 +66,44 @@ encrypted using AES256 CBC mode prior to transmission to the server, and
 remains encrypted until accessed by another user with the read (or verify)
 capabilities.
 
+Ruby Client
+-----------
+
+Keyspace provides a simple Ruby client for storing and retrieving encrypted
+data from the server. In this example, a system operator creates a bucket,
+puts a value inside of it, and then saves the bucket to the server:
+
+    >> bucket = Keyspace::Client::Bucket.create("mybucket")
+     => #<Keyspace::Client::Bucket mybucket:rw@d4u5qekdyezqlugxmht...ir2r3nbcd>
+    >> bucket[:foobar] = "baz"
+     => "baz"
+    >> bucket.save!
+     => true
+
+The system administrator can then degrade the capability for this bucket to
+a readcap prior to disseminating it to a system user:
+
+    >> bucket.capability.degrade(:readcap).to_s
+     => "mybucket:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi"
+
+We'll now switch to the perspective of a system user who has been given the
+readcap created above. First, they'll set the server URL and create a new
+bucket object from the readcap. They'll then be able to access values from
+this bucket by key, but they cannot make changes:
+
+    >> Keyspace::Client.url = "http://127.0.0.1:4567"
+     => "http://127.0.0.1:4567"
+    >> bucket = Keyspace::Client::Bucket.new("mybucket:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi")
+     => #<Keyspace::Client::Bucket "mybucket:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi">
+    >> bucket[:foobar]
+     => "baz"
+    >> bucket[:foobar] = "can't touch this"
+    Keyspace::InvalidCapabilityError: don't have write capability for this bucket: mybucket
+            from /Users/tony/dev/keyspace/lib/keyspace/client/bucket.rb:56:in `put'
+            from (irb):9
+            from /Users/tony/.rvm/rubies/ruby-1.9.3-p194/bin/irb:16:in `<main>'
+
+
 Suggested Reading
 -----------------
 
