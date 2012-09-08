@@ -134,7 +134,7 @@ module Keyspace
 
     # Is this a verify capability?
     def verifycap?
-      @capabilities.include?('r') || @capabilities.include?('v')
+      readcap? || @capabilities.include?('v')
     end
 
     # Generate a token out of this capability
