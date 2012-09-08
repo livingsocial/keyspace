@@ -124,12 +124,12 @@ module Keyspace
 
     # Is this a write capability?
     def writecap?
-      @capabilities['w']
+      @capabilities.include?('w')
     end
 
     # Is this a read capability?
     def readcap?
-      @capabilities['r']
+      @capabilities.include?('r')
     end
 
     # Is this a verify capability?
