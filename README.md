@@ -44,7 +44,7 @@ tokens from a read-verify token (or write-read-verify token).
 Data Flow
 ---------
 
-![Data Flow Diagram](http://code.livingsocial.net/tarcieri/keyspace/raw/master/dataflow.png)
+![Data Flow Diagram](https://raw.github.com/livingsocial/keyspace/master/dataflow.png)
 
 Keyspace provides a separation between the powers of system administrators
 to alter the system configuration, system users who want to consume and verify
