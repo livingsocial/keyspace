@@ -1,5 +1,6 @@
 Keyspace
 ========
+[![Build Status](https://secure.travis-ci.org/livingsocial/keyspace.png?branch=master)](http://travis-ci.org/livingsocial/keyspace)
 
 Keyspace is an encrypted key/value store which emphasizes a "least authority"
 philosophy for information sharing. All data is stored as encrypted key/value
