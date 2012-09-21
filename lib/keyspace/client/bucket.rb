@@ -87,7 +87,6 @@ module Keyspace
 
             response = http.request request
             unless response.code == "200"
-              puts response.body
               raise BucketError, "couldn't save `#{key}' to bucket `#{id}': #{response.code} #{response.message}"
             end
           end
@@ -107,6 +106,22 @@ module Keyspace
 
       # Is this a new bucket which hasn't been saved to the server yet?
       def new_bucket?; @new_bucket; end
+      
+      # Delete this bucket from the server
+      def delete
+        raise BucketError, "can't delete new buckets" if new_bucket?
+        
+        uri  = URI(Keyspace::Client.url)
+        http = Net::HTTP.new(uri.host, uri.port)
+        
+        request  = Net::HTTP::Delete.new("/buckets/#{id}")
+        response = http.request request
+        unless response.code == "200"
+          raise BucketError, "couldn't delete bucket #{id}: #{response.code} #{response.message}"
+        end
+        
+        true
+      end
     end
   end
 end

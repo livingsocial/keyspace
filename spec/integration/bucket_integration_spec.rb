@@ -45,4 +45,12 @@ describe "Bucket integration" do
 
     bucket[:foo].should eq example_value
   end
+  
+  it "deletes buckets" do
+    bucket = Keyspace::Client::Bucket.create(example_bucket)
+    bucket.save!
+    
+    bucket.delete
+    bucket.save!
+  end
 end

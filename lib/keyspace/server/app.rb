@@ -36,6 +36,11 @@ module Keyspace
         bucket.put(body)
         200
       end
+      
+      delete '/buckets/:bucket' do
+        Keyspace::Server::Bucket.delete(params[:bucket])  
+        200
+      end
     end
   end
 end
