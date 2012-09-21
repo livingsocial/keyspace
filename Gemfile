@@ -1,4 +1,4 @@
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in vault.gemspec
+# Specify your gem's dependencies in keyspace.gemspec
 gemspec
