@@ -1,4 +1,6 @@
 require 'base32'
+require 'red25519'
+require 'hkdf'
 
 module Keyspace
   # Something requires a capability we don't have
@@ -13,19 +15,20 @@ module Keyspace
     SYMMETRIC_CIPHER = "aes-256-cbc"
 
     # Size of the symmetric key used for encrypting contents
-    SYMMETRIC_KEY_SIZE = 256
-
+    SYMMETRIC_KEY_BYTES = 32
+    
     # Maximum length of a key (as in key/value pair) name
     MAX_KEY_LENGTH = 256
 
-    attr_reader :id, :signature_key, :encryption_key, :capabilities
+    attr_reader :id, :signature_key, :verify_key, :encryption_key, :capabilities
 
-    # Generate a brand new capability. Note: id is not authenticated
+    # Generate a new writecap. Note: id is not authenticated
     def self.generate(id)
-      signature_key  = SignatureAlgorithm.generate_key
-      encryption_key = Keyspace.random_bytes(SYMMETRIC_KEY_SIZE / 8)
+      signature_key = Ed25519::SigningKey.generate.to_bytes
+      hkdf = HKDF.new Keyspace.random_bytes(SYMMETRIC_KEY_BYTES)
+      encryption_key = hkdf.next_bytes(SYMMETRIC_KEY_BYTES)
 
-      new(id, signature_key, encryption_key)
+      new(id, 'rw', signature_key, encryption_key)
     end
 
     # Parse a capability token into a capability object
@@ -35,24 +38,24 @@ module Keyspace
 
       case caps
       when 'r', 'rw'
-        encryption_key, signature_key = keys.unpack("a#{SYMMETRIC_KEY_SIZE/8}a*")
+        encryption_key, signature_key = keys.unpack("a#{SYMMETRIC_KEY_BYTES}a*")
       when 'v'
         encryption_key, signature_key = nil, keys
       else raise ArgumentError, "invalid capability level: #{caps}"
       end
 
-      new(id, signature_key, encryption_key)
+      new(id, caps, signature_key, encryption_key)
     end
 
-    def initialize(id, signature_key, encryption_key = nil)
-      @id, @signature_key, @encryption_key = id, signature_key, encryption_key
-      @signer = SignatureAlgorithm.new(signature_key)
-
-      if encryption_key
-        @capabilities = 'r'
-        @capabilities << 'w' if @signer.private_key?
+    def initialize(id, caps, signature_key, encryption_key = nil)
+      @id, @capabilities, @encryption_key = id, caps, encryption_key
+      
+      if caps.include?('w')
+        @signature_key = Ed25519::SigningKey.new(signature_key)
+        @verify_key = @signature_key.verify_key
       else
-        @capabilities = 'v'
+        @signature_key = nil
+        @verify_key = Ed25519::VerifyKey.new(signature_key)
       end
     end
 
@@ -60,7 +63,7 @@ module Keyspace
     # Key is not a cryptographic key, but a human meaningful id that this
     # data should be associated with
     def encrypt(key, value, timestamp = Time.now)
-      raise InvalidCapabilityError, "don't have write capability" unless @signer.private_key?
+      raise InvalidCapabilityError, "don't have write capability" unless @signature_key
       raise ArgumentError, "key too long" if key.to_s.size > MAX_KEY_LENGTH
 
       cipher = OpenSSL::Cipher::Cipher.new(SYMMETRIC_CIPHER)
@@ -73,17 +76,15 @@ module Keyspace
       ciphertext << cipher.final
 
       # TODO: hash/encrypt key
-      message   = [key.size, key.to_s, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("CA*QA16NA*")
-      signature = @signer.sign(message)
-      [signature.size, signature, message].pack("Ca*a*")
+      message   = [key.size, key.to_s, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("Ca*Qa16Na*")
+      signature = @signature_key.sign(message)
+      signature + message
     end
 
     # Determine if the given encrypted value is authentic
     def verify(encrypted_value)
-      signature_size, rest = encrypted_value.unpack("Ca*")
-      signature, message = rest.unpack("A#{signature_size}A*")
-
-      @signer.verify(message, signature)
+      signature, message = encrypted_value.unpack("a#{Ed25519::SIGNATURE_BYTES}a*")
+      @verify_key.verify(signature, message)
     end
 
     # Decrypt an encrypted value, checking its authenticity with the bucket's verify key
@@ -91,8 +92,7 @@ module Keyspace
       raise InvalidCapabilityError, "don't have read capability" unless encryption_key
       raise InvalidSignatureError, "potentially forged data: signature mismatch" unless verify(encrypted_value)
 
-      signature_size, rest = encrypted_value.unpack("CA*")
-      signature, key_size, rest = rest.unpack("a#{signature_size}Ca*")
+      signature, key_size, rest = encrypted_value.unpack("a#{Ed25519::SIGNATURE_BYTES}Ca*")
       key, timestamp, iv, message_size, ciphertext = rest.unpack("a#{key_size}Qa16Na*")
 
       # Cast to Time from an integer timestamp
@@ -115,9 +115,9 @@ module Keyspace
       case new_capability
       when :r, :read, :readcap
         raise InvalidCapabilityError, "don't have read capability" unless @encryption_key
-        self.class.new(@id, @signer.public_key, @encryption_key)
+        self.class.new(@id, 'r', @verify_key.to_bytes, @encryption_key)
       when :v, :verify, :verifycap
-        self.class.new(@id, @signer.public_key)
+        self.class.new(@id, 'v', @verify_key.to_bytes)
       else raise ArgumentError, "invalid capability: #{new_capability}"
       end
     end
@@ -139,7 +139,14 @@ module Keyspace
 
     # Generate a token out of this capability
     def to_s
-      keys = encryption_key ? encryption_key + signature_key : signature_key
+      keys = encryption_key || ""
+      
+      if @signature_key
+        keys += @signature_key.to_bytes
+      else
+        keys += @verify_key.to_bytes
+      end
+      
       keys32 = Base32.encode(keys).downcase.sub(/=+$/, '')
       "#{id}:#{capabilities || 'v'}@#{keys32}"
     end

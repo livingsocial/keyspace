@@ -1,9 +1,8 @@
 require 'pathname'
 require 'openssl'
-require 'keyspace/version'
 
+require 'keyspace/version'
 require 'keyspace/capability'
-require 'keyspace/signature_algorithm'
 
 module Keyspace
   # Generic errors surrounding buckets
