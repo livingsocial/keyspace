@@ -1,5 +1,5 @@
 require 'keyspace'
-require 'keyspace/client/bucket'
+require 'keyspace/client/vault'
 require 'uri'
 
 module Keyspace

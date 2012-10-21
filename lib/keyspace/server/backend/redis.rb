@@ -11,53 +11,53 @@ module Keyspace
           @redis = redis
         end
 
-        # Create a new bucket
+        # Create a new vault
         def create(verifycap)
           verifycap = Capability.parse(verifycap) if verifycap.is_a? String
 
-          # TODO: check if bucket already exists
+          # TODO: check if vault already exists
           @redis.set verifycap_key(verifycap.id), verifycap
         end
 
-        # Delete a bucket
-        def delete(bucket_id)
-          verifycap_key = verifycap_key(bucket_id)
+        # Delete a vault
+        def delete(vault_id)
+          verifycap_key = verifycap_key(vault_id)
           verifycap = @redis.get verifycap_key
-          raise BucketNotFoundError, "no such bucket: #{bucket_id}" unless verifycap
+          raise VaultNotFoundError, "no such vault: #{vault_id}" unless verifycap
 
-          # TODO: delete bucket contents
+          # TODO: delete vault contents
           @redis.del verifycap_key
         end
 
-        # Obtain the stored verifycap for a given bucket
-        def verifycap(bucket_id)
-          @redis.get verifycap_key(bucket_id)
+        # Obtain the stored verifycap for a given vault
+        def verifycap(vault_id)
+          @redis.get verifycap_key(vault_id)
         end
 
-        # Retrieve a value from the bucket
+        # Retrieve a value from the vault
         # No verification of authenticity is performed as it should be
         # performed by Keyspace::Server prior to storage
-        def get(bucket, key)
-          @redis.get value_key(bucket, key)
+        def get(vault, key)
+          @redis.get value_key(vault, key)
         end
 
-        # Put a value in a bucket
+        # Put a value in a vault
         # No verification of authenticity is performed as it should be
         # performed by Keyspace::Server prior to storage
-        def put(bucket, key, value)
-          @redis.set value_key(bucket, key), value
+        def put(vault, key, value)
+          @redis.set value_key(vault, key), value
         end
 
       private
 
         # Obtain the redis key name for a given verifycap
-        def verifycap_key(bucket_id)
-          "verifycap::#{bucket_id}"
+        def verifycap_key(vault_id)
+          "verifycap::#{vault_id}"
         end
 
-        # Obtain the key name for a particular bucket/key pair
-        def value_key(bucket, key)
-          "value::#{bucket}:#{key}"
+        # Obtain the key name for a particular vault/key pair
+        def value_key(vault, key)
+          "value::#{vault}:#{key}"
         end
       end
     end

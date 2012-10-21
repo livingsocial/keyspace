@@ -2,47 +2,47 @@ require 'forwardable'
 
 module Keyspace
   module Server
-    class Bucket
+    class Vault
       extend Forwardable
       def_delegators :@capability, :id, :capabilities
 
       class << self
-        # Persistence layer for buckets
+        # Persistence layer for vaults
         attr_accessor :store
 
-        # Generate a completely new bucket
+        # Generate a completely new vault
         def create(verifycap)
-          # TODO: check for existing buckets
+          # TODO: check for existing vaults
           store.create(verifycap)
           new verifycap
         end
 
-        # Find an existing bucket by its ID
-        def get(bucket_id)
-          verifycap = store.verifycap(bucket_id)
-          raise BucketNotFoundError, "no such bucket: #{bucket_id}" unless verifycap
+        # Find an existing vault by its ID
+        def get(vault_id)
+          verifycap = store.verifycap(vault_id)
+          raise VaultNotFoundError, "no such vault: #{vault_id}" unless verifycap
 
           new(verifycap)
         end
 
-        # Delete a bucket by its ID
-        def delete(bucket_id)
-          store.delete(bucket_id)
+        # Delete a vault by its ID
+        def delete(vault_id)
+          store.delete(vault_id)
         end
       end
 
-      # Load a bucket from a capability string
+      # Load a vault from a capability string
       def initialize(capability_string)
         @capability = Capability.parse(capability_string)
       end
 
-      # Retrieve an encrypted value from a bucket
+      # Retrieve an encrypted value from a vault
       def get(key)
         self.class.store.get(id, key.to_s)
       end
       alias_method :[], :get
 
-      # Store an encrypted value in this bucket
+      # Store an encrypted value in this vault
       def put(ciphertext)
         if @capability.verify(ciphertext)
           # TODO: encapsulate this logic somewhere better (in Capability perhaps?)

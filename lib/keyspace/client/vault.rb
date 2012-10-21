@@ -3,21 +3,21 @@ require 'net/http'
 
 module Keyspace
   module Client
-    class Bucket
+    class Vault
       attr_reader :capability
 
       extend Forwardable
       def_delegators :@capability, :id, :capabilities
 
-      # Generate a completely new bucket
+      # Generate a completely new vault
       def self.create(id)
         new(Keyspace::Capability.generate(id).to_s, true)
       end
 
-      # Load a bucket from a capability string
-      def initialize(capability_string, new_bucket = false)
+      # Load a vault from a capability string
+      def initialize(capability_string, new_vault = false)
         @capability = Capability.parse(capability_string)
-        @new_bucket = new_bucket
+        @new_vault = new_vault
         @changes = {}
       end
 
@@ -25,7 +25,7 @@ module Keyspace
         "#<#{self.class} #{@capability}>"
       end
 
-      # Obtain the verifycap for this bucket
+      # Obtain the verifycap for this vault
       def verifycap
         @capability.degrade(:verify)
       end
@@ -33,7 +33,7 @@ module Keyspace
       # Retrieve a value from keyspace
       def get(key)
         uri = URI(Keyspace::Client.url)
-        uri.path = "/buckets/#{id}/#{key}"
+        uri.path = "/vaults/#{id}/#{key}"
 
         http = Net::HTTP.new(uri.host, uri.port)
         response = http.request Net::HTTP::Get.new(uri.request_uri)
@@ -48,34 +48,34 @@ module Keyspace
       end
       alias_method :[], :get
 
-      # Store a value in the bucket
+      # Store a value in the vault
       # Values are not persisted until #save is called
       def put(key, value)
         if @capability.writecap?
           @changes[key] = value
-        else raise InvalidCapabilityError, "don't have write capability for this bucket"
+        else raise InvalidCapabilityError, "don't have write capability for this vault"
         end
       end
       alias_method :[]=, :put
 
-      # Save this bucket and raise an exception if the save fails
+      # Save this vault and raise an exception if the save fails
       def save!
         uri = URI(Keyspace::Client.url)
 
-        if new_bucket?
-          uri.path = "/buckets"
+        if new_vault?
+          uri.path = "/vaults"
 
           response = Net::HTTP.post_form(uri, :verifycap => verifycap)
 
           if response.code == "201"
-            @new_bucket = false
+            @new_vault = false
             true
-          else raise BucketError, "couldn't save bucket: #{response.code} #{response.message}"
+          else raise VaultError, "couldn't save vault: #{response.code} #{response.message}"
           end
         end
 
         if !@changes.empty?
-          uri.path = "/buckets/#{id}"
+          uri.path = "/vaults/#{id}"
 
           # TODO: real bulk API
           @changes.each do |key, value|
@@ -87,7 +87,7 @@ module Keyspace
 
             response = http.request request
             unless response.code == "200"
-              raise BucketError, "couldn't save `#{key}' to bucket `#{id}': #{response.code} #{response.message}"
+              raise VaultError, "couldn't save `#{key}' to vault `#{id}': #{response.code} #{response.message}"
             end
           end
 
@@ -97,27 +97,27 @@ module Keyspace
         true
       end
 
-      # Save this bucket to the server
+      # Save this vault to the server
       def save
         save!
       rescue
         false
       end
 
-      # Is this a new bucket which hasn't been saved to the server yet?
-      def new_bucket?; @new_bucket; end
+      # Is this a new vault which hasn't been saved to the server yet?
+      def new_vault?; @new_vault; end
       
-      # Delete this bucket from the server
+      # Delete this vault from the server
       def delete
-        raise BucketError, "can't delete new buckets" if new_bucket?
+        raise VaultError, "can't delete new vaults" if new_vault?
         
         uri  = URI(Keyspace::Client.url)
         http = Net::HTTP.new(uri.host, uri.port)
         
-        request  = Net::HTTP::Delete.new("/buckets/#{id}")
+        request  = Net::HTTP::Delete.new("/vaults/#{id}")
         response = http.request request
         unless response.code == "200"
-          raise BucketError, "couldn't delete bucket #{id}: #{response.code} #{response.message}"
+          raise VaultError, "couldn't delete vault #{id}: #{response.code} #{response.message}"
         end
         
         true

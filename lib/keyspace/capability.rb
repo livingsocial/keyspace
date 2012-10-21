@@ -1,6 +1,8 @@
-require 'base32'
+require 'securerandom'
+require 'openssl'
 require 'red25519'
 require 'hkdf'
+require 'base32'
 
 module Keyspace
   # Something requires a capability we don't have
@@ -25,7 +27,7 @@ module Keyspace
     # Generate a new writecap. Note: id is not authenticated
     def self.generate(id)
       signature_key = Ed25519::SigningKey.generate.to_bytes
-      hkdf = HKDF.new Keyspace.random_bytes(SYMMETRIC_KEY_BYTES)
+      hkdf = HKDF.new SecureRandom.random_bytes(SYMMETRIC_KEY_BYTES)
       encryption_key = hkdf.next_bytes(SYMMETRIC_KEY_BYTES)
 
       new(id, 'rw', signature_key, encryption_key)
@@ -87,7 +89,7 @@ module Keyspace
       @verify_key.verify(signature, message)
     end
 
-    # Decrypt an encrypted value, checking its authenticity with the bucket's verify key
+    # Decrypt an encrypted value, checking its authenticity with the verify key
     def decrypt(encrypted_value)
       raise InvalidCapabilityError, "don't have read capability" unless encryption_key
       raise InvalidSignatureError, "potentially forged data: signature mismatch" unless verify(encrypted_value)
