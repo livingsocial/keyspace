@@ -14,6 +14,22 @@ gain access to a particular vault. Such an access scheme is known as
 "capabilities as keys" or "cryptographic capabilities". This approach provides
 secure sharing of access to vaults.
 
+Status
+------
+
+Keyspace is still experimental and the design is subject to change. Some of
+the planned changes are:
+
+* Use the RbNaCl gem for all crypto: https://github.com/cryptosphere/rbnacl
+* Move from AES-CBC to NaCl secretbox (xsalsa20 + poly1305)
+* Redesign capabilities as real URIs
+* Switch backend k/v storage to Moneta
+
+If you're interested in using Keyspace, join the mailing list by sending a
+message to:
+
+[keyspace@librelist.com](mailto:keyspace@librelist.com)
+
 Capabilities
 ------------
 
