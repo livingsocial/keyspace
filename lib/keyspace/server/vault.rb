@@ -46,8 +46,8 @@ module Keyspace
       def put(ciphertext)
         if @capability.verify(ciphertext)
           # TODO: encapsulate this logic somewhere better (in Capability perhaps?)
-          signature, key_size, rest = ciphertext.unpack("a#{Ed25519::SIGNATURE_BYTES}Ca*")
-          key = rest[0...key_size]
+          signature, key_size, rest = ciphertext.unpack("a#{Capability::SIGNATURE_BYTES}Ca*")
+          key = rest[0, key_size]
 
           self.class.store.put(id, key, ciphertext)
         else

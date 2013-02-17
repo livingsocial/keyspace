@@ -1,8 +1,6 @@
-require 'securerandom'
-require 'openssl'
-require 'red25519'
-require 'hkdf'
+require 'rbnacl'
 require 'base32'
+require 'openssl'
 
 module Keyspace
   # Something requires a capability we don't have
@@ -18,17 +16,19 @@ module Keyspace
 
     # Size of the symmetric key used for encrypting contents
     SYMMETRIC_KEY_BYTES = 32
-    
+
+    # Number of bytes in signatures
+    SIGNATURE_BYTES = Crypto::NaCl::SIGNATUREBYTES
+
     # Maximum length of a key (as in key/value pair) name
-    MAX_KEY_LENGTH = 256
+    MAX_NAME_LENGTH = 256
 
     attr_reader :id, :signature_key, :verify_key, :encryption_key, :capabilities
 
     # Generate a new writecap. Note: id is not authenticated
     def self.generate(id)
-      signature_key = Ed25519::SigningKey.generate.to_bytes
-      hkdf = HKDF.new SecureRandom.random_bytes(SYMMETRIC_KEY_BYTES)
-      encryption_key = hkdf.next_bytes(SYMMETRIC_KEY_BYTES)
+      signature_key  = Crypto::SigningKey.generate.to_bytes
+      encryption_key = Crypto::Random.random_bytes(32)
 
       new(id, 'rw', signature_key, encryption_key)
     end
@@ -53,20 +53,18 @@ module Keyspace
       @id, @capabilities, @encryption_key = id, caps, encryption_key
       
       if caps.include?('w')
-        @signature_key = Ed25519::SigningKey.new(signature_key)
+        @signature_key = Crypto::SigningKey.new(signature_key)
         @verify_key = @signature_key.verify_key
       else
         @signature_key = nil
-        @verify_key = Ed25519::VerifyKey.new(signature_key)
+        @verify_key = Crypto::VerifyKey.new(signature_key)
       end
     end
 
-    # Encrypt a key/value pair for insertion into Keyspace
-    # Key is not a cryptographic key, but a human meaningful id that this
-    # data should be associated with
-    def encrypt(key, value, timestamp = Time.now)
+    # Encrypt a name/value pair for insertion into Keyspace
+    def encrypt(name, value, timestamp = Time.now)
       raise InvalidCapabilityError, "don't have write capability" unless @signature_key
-      raise ArgumentError, "key too long" if key.to_s.size > MAX_KEY_LENGTH
+      raise ArgumentError, "name too long" if name.to_s.size > MAX_NAME_LENGTH
 
       cipher = OpenSSL::Cipher::Cipher.new(SYMMETRIC_CIPHER)
       cipher.encrypt
@@ -77,16 +75,16 @@ module Keyspace
       ciphertext =  cipher.update(value)
       ciphertext << cipher.final
 
-      # TODO: hash/encrypt key
-      message   = [key.size, key.to_s, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("Ca*Qa16Na*")
+      # TODO: hash/encrypt name
+      message   = [name.size, name.to_s, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("Ca*Qa16Na*")
       signature = @signature_key.sign(message)
       signature + message
     end
 
     # Determine if the given encrypted value is authentic
     def verify(encrypted_value)
-      signature, message = encrypted_value.unpack("a#{Ed25519::SIGNATURE_BYTES}a*")
-      @verify_key.verify(signature, message)
+      signature, message = encrypted_value.unpack("a#{SIGNATURE_BYTES}a*")
+      @verify_key.verify(message, signature)
     end
 
     # Decrypt an encrypted value, checking its authenticity with the verify key
@@ -94,8 +92,8 @@ module Keyspace
       raise InvalidCapabilityError, "don't have read capability" unless encryption_key
       raise InvalidSignatureError, "potentially forged data: signature mismatch" unless verify(encrypted_value)
 
-      signature, key_size, rest = encrypted_value.unpack("a#{Ed25519::SIGNATURE_BYTES}Ca*")
-      key, timestamp, iv, message_size, ciphertext = rest.unpack("a#{key_size}Qa16Na*")
+      signature, key_size, rest = encrypted_value.unpack("a#{SIGNATURE_BYTES}Ca*")
+      name, timestamp, iv, message_size, ciphertext = rest.unpack("a#{key_size}Qa16Na*")
 
       # Cast to Time from an integer timestamp
       timestamp = Time.at(timestamp)
@@ -109,7 +107,7 @@ module Keyspace
       plaintext = cipher.update(ciphertext)
       plaintext << cipher.final
 
-      [key, plaintext, timestamp]
+      [name, plaintext, timestamp]
     end
 
     # Degrade this capability to a lower level
