@@ -31,10 +31,10 @@ Status
 Keyspace is still experimental and the design is subject to change. Some of
 the planned changes are:
 
-* Use the RbNaCl gem for all crypto: https://github.com/cryptosphere/rbnacl
-* Move from AES-CBC to NaCl secretbox (xsalsa20 + poly1305)
+* Switch from AES-CBC to NaCl SecretBox (xsalsa20 + poly1305)
 * Redesign capabilities as real URIs
 * Switch backend k/v storage to Moneta
+* (Maybe) switch from Sinatra to Webmachine
 
 If you're interested in using Keyspace, join the mailing list by sending a
 message to:
