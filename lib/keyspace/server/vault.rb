@@ -44,20 +44,14 @@ module Keyspace
 
       # Store an encrypted value in this vault
       def put(ciphertext)
-        if @capability.verify(ciphertext)
-          # TODO: encapsulate this logic somewhere better (in Capability perhaps?)
-          signature, key_size, rest = ciphertext.unpack("a#{Capability::SIGNATURE_BYTES}Ca*")
-          key = rest[0, key_size]
-
-          self.class.store.put(id, key, ciphertext)
-        else
-          raise InvalidSignatureError, "potentially forged data: signature mismatch"
-        end
+        # TODO: check timestamp against existing values to prevent replay attacks
+        name, timestmp = @capability.unpack_value(ciphertext)
+        self.class.store.put(id, name, ciphertext)
       end
       alias_method :[]=, :put
 
       def inspect
-        "#<#{self.class} #{id} #{@capability}>"
+        "#<#{self.class}:#{id} #{@capability}>"
       end
     end
   end

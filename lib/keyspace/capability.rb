@@ -75,10 +75,24 @@ module Keyspace
       ciphertext =  cipher.update(value)
       ciphertext << cipher.final
 
-      # TODO: hash/encrypt name
-      message   = [name.size, name.to_s, timestamp.utc.to_i, iv, ciphertext.size, ciphertext].pack("Ca*Qa16Na*")
-      signature = @signature_key.sign(message)
-      signature + message
+      pack_value(name, timestamp, iv, ciphertext)
+    end
+
+    # Decrypt an encrypted value, checking its authenticity with the verify key
+    def decrypt(encrypted_value)
+      raise InvalidCapabilityError, "don't have read capability" unless encryption_key
+      name, timestamp, nonce, ciphertext = unpack_value(encrypted_value)
+
+      cipher = OpenSSL::Cipher::Cipher.new("aes-256-cbc")
+      cipher.decrypt
+
+      cipher.key = encryption_key
+      cipher.iv  = nonce
+
+      plaintext = cipher.update(ciphertext)
+      plaintext << cipher.final
+
+      [name, plaintext, timestamp]
     end
 
     # Determine if the given encrypted value is authentic
@@ -87,27 +101,28 @@ module Keyspace
       @verify_key.verify(message, signature)
     end
 
-    # Decrypt an encrypted value, checking its authenticity with the verify key
-    def decrypt(encrypted_value)
-      raise InvalidCapabilityError, "don't have read capability" unless encryption_key
-      raise InvalidSignatureError, "potentially forged data: signature mismatch" unless verify(encrypted_value)
+    # Verify which raises if the signature doesn't match
+    def verify!(encrypted_value)
+      verify(encrypted_value) or raise InvalidSignatureError, "potentially forged data: signature mismatch"
+    end
 
+    # Pack an encrypted value into its serialized representation
+    def pack_value(name, timestamp, nonce, ciphertext)
+      # TODO: hash/encrypt name
+      name = name.to_s
+
+      message   = [name.bytesize, name, timestamp.utc.to_i, nonce, ciphertext].pack("Ca*Qa16a*")
+      signature = @signature_key.sign(message)
+      signature + message
+    end
+
+    # Parse an encrypted value into its constituent components
+    def unpack_value(encrypted_value)
+      verify!(encrypted_value)
       signature, key_size, rest = encrypted_value.unpack("a#{SIGNATURE_BYTES}Ca*")
-      name, timestamp, iv, message_size, ciphertext = rest.unpack("a#{key_size}Qa16Na*")
+      name, timestamp, nonce, ciphertext = rest.unpack("a#{key_size}Qa16a*")
 
-      # Cast to Time from an integer timestamp
-      timestamp = Time.at(timestamp)
-
-      cipher = OpenSSL::Cipher::Cipher.new("aes-256-cbc")
-      cipher.decrypt
-
-      cipher.key = encryption_key
-      cipher.iv  = iv
-
-      plaintext = cipher.update(ciphertext)
-      plaintext << cipher.final
-
-      [name, plaintext, timestamp]
+      [name, Time.at(timestamp), nonce, ciphertext]
     end
 
     # Degrade this capability to a lower level
