@@ -2,17 +2,28 @@ Keyspace
 ========
 [![Build Status](https://secure.travis-ci.org/livingsocial/keyspace.png?branch=master)](http://travis-ci.org/livingsocial/keyspace)
 
-Keyspace is an encrypted key/value store which emphasizes a "least authority"
-philosophy for information sharing. All data is stored as encrypted key/value
+Keyspace is an encrypted name/value store which emphasizes a "least authority"
+philosophy for information sharing. All data is stored as encrypted name/value
 pairs, and data can be organized into "vaults" which each have independent
 encryption tokens and access control.
 
-Keyspace uses the capability access control model to manage access to vaults.
-Each capability takes the form of cryptographic tokens which are unique to a
-particular vault. Knowledge of these tokens is necessary and sufficient to
+Keyspace uses [capability-based security][capabilities] model to manage access
+to vaults. Each capability takes the form of cryptographic tokens which are unique
+to a particular vault. Knowledge of these tokens is necessary and sufficient to
 gain access to a particular vault. Such an access scheme is known as
 "capabilities as keys" or "cryptographic capabilities". This approach provides
 secure sharing of access to vaults.
+
+This means there is no access control system (e.g. RBAC) other than the capability
+tokens themselves. Authorization is handled completely by whether or not you have
+the necessary cryptographic tokens to carry out a desired action.
+
+Keyspace is built on [RbNaCl][rbnacl], a Ruby wrapper to the
+[Networking and Cryptography][nacl] library by Daniel J. Bernstein.
+
+[capabilities]: http://en.wikipedia.org/wiki/Capability-based_security
+[rbnacl]: https://github.com/cryptosphere/rbnacl
+[nacl]: http://nacl.cr.yp.to/
 
 Status
 ------
