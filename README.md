@@ -45,10 +45,13 @@ the planned changes are:
 * Switch backend k/v storage to Moneta
 * (Maybe) switch from Sinatra to Webmachine
 
+Mailing List
+------------
+
 If you're interested in using Keyspace, join the mailing list by sending a
 message to:
 
-[keyspace@librelist.com](mailto:keyspace@librelist.com)
+* [keyspace@librelist.com](mailto:keyspace@librelist.com)
 
 Capabilities
 ------------
