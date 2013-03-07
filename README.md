@@ -113,36 +113,66 @@ Keyspace provides a simple Ruby client for storing and retrieving encrypted
 data from the server. In this example, a system operator creates a vault,
 puts a value inside of it, and then saves the vault to the server:
 
-    >> vault = Keyspace::Client::Vault.create("myvault")
-     => #<Keyspace::Client::Vault myvault:rw@d4u5qekdyezqlugxmht...ir2r3nbcd>
-    >> vault[:foobar] = "baz"
-     => "baz"
-    >> vault.save!
-     => true
+```
+>> vault = Keyspace::Client::Vault.create("myvault")
+ => #<Keyspace::Client::Vault myvault:rw@d4u5qekdyezqlugxmht...ir2r3nbcd>
+>> vault[:foobar] = "baz"
+ => "baz"
+>> vault.save!
+ => true
+```
 
 The system administrator can then degrade the capability for this vault to
 a readcap prior to disseminating it to a system user:
 
-    >> vault.capability.degrade(:readcap).to_s
-     => "myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi"
+```
+>> vault.capability.degrade(:readcap).to_s
+ => "myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi"
+```
 
 We'll now switch to the perspective of a system user who has been given the
 readcap created above. First, they'll set the server URL and create a new
 vault object from the readcap. They'll then be able to access values from
 this vault by key, but they cannot make changes:
 
-    >> Keyspace::Client.url = "http://127.0.0.1:4567"
-     => "http://127.0.0.1:4567"
-    >> vault = Keyspace::Client::Vault.new("myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi")
-     => #<Keyspace::Client::Vault "myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi">
-    >> vault[:foobar]
-     => "baz"
-    >> vault[:foobar] = "can't touch this"
-    Keyspace::InvalidCapabilityError: don't have write capability for this vault: myvault
-            from /Users/tony/dev/keyspace/lib/keyspace/client/vault.rb:56:in `put'
-            from (irb):9
-            from /Users/tony/.rvm/rubies/ruby-1.9.3-p194/bin/irb:16:in `<main>'
+```
+>> Keyspace::Client.url = "http://127.0.0.1:4567"
+ => "http://127.0.0.1:4567"
+>> vault = Keyspace::Client::Vault.new("myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi")
+ => #<Keyspace::Client::Vault "myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi">
+>> vault[:foobar]
+ => "baz"
+>> vault[:foobar] = "can't touch this"
+Keyspace::InvalidCapabilityError: don't have write capability for this vault: myvault
+        from /Users/tony/dev/keyspace/lib/keyspace/client/vault.rb:56:in `put'
+        from (irb):9
+        from /Users/tony/.rvm/rubies/ruby-1.9.3-p194/bin/irb:16:in `<main>'
+```
 
+Security Notes
+--------------
+
+Keyspace is built on state-of-the-art cryptographic primitives, but
+that alone does not make for a secure system. It is yet to be audited
+by an expert cryptographer, and for that reason alone should be somewhat
+suspect in the eyes of anyone interested in its security.
+
+For that reason alone, Keyspace should be experimental until audited by
+cryptographic experts.
+
+Reporting Security Problems
+---------------------------
+
+If you have discovered a bug in Keyspace of a sensitive nature, i.e.
+one which can compromise the security of Keyspace users, you can
+report it securely by sending a GPG encrypted message. Please use
+the following key:
+
+https://raw.github.com/livingsocial/keyspace/master/keyspace.gpg
+
+The key fingerprint is (or should be):
+
+`190E 42D6 8327 A515 BFDF AAE0 B210 269D BB2D 8787`
 
 Suggested Reading
 -----------------
