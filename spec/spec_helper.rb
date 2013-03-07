@@ -3,6 +3,9 @@ require 'keyspace/client'
 require 'keyspace/server'
 require 'rack/test'
 
+require 'coveralls'
+Coveralls.wear!
+
 set :environment, :test
 set :run, false
 set :raise_errors, true
