@@ -1,6 +1,7 @@
 Keyspace
 ========
 [![Build Status](https://secure.travis-ci.org/livingsocial/keyspace.png?branch=master)](http://travis-ci.org/livingsocial/keyspace)
+[![Coverage Status](https://coveralls.io/repos/livingsocial/keyspace/badge.png?branch=master)](https://coveralls.io/r/livingsocial/keyspace)
 
 Keyspace is an encrypted name/value store which emphasizes a "least authority"
 philosophy for information sharing. All data is stored as encrypted name/value
