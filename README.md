@@ -4,6 +4,13 @@ Keyspace
 [![Code Climate](https://codeclimate.com/github/livingsocial/keyspace.png)](https://codeclimate.com/github/livingsocial/keyspace)
 [![Coverage Status](https://coveralls.io/repos/livingsocial/keyspace/badge.png?branch=master)](https://coveralls.io/r/livingsocial/keyspace)
 
+Simple secret storage for webapps, using [RbNaCl][rbnacl] for security.
+
+[rbnacl]: https://github.com/cryptosphere/rbnacl
+
+About
+-----
+
 Keyspace is an encrypted name/value store which emphasizes a "least authority"
 philosophy for information sharing. All data is stored as encrypted name/value
 pairs, and data can be organized into "vaults" which each have independent
