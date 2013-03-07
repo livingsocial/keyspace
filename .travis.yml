@@ -14,8 +14,8 @@ rvm:
 matrix:
   allow_failures:
     - rvm: ruby-head
-    - jruby-18mode # failing tests
-    - jruby-19mode # ditto
+    - rvm: jruby-18mode # failing tests
+    - rvm: jruby-19mode # ditto
     - rvm: jruby-head
 
 notifications:
