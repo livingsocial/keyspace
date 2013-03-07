@@ -9,8 +9,8 @@ philosophy for information sharing. All data is stored as encrypted name/value
 pairs, and data can be organized into "vaults" which each have independent
 encryption tokens and access control.
 
-Keyspace uses [capability-based security][capabilities] model to manage access
-to vaults. Each capability takes the form of cryptographic tokens which are unique
+Keyspace uses [capability-based security][capabilities] to manage access to vaults.
+Each capability takes the form of cryptographic tokens which are unique
 to a particular vault. Knowledge of these tokens is necessary and sufficient to
 gain access to a particular vault. Such an access scheme is known as
 "capabilities as keys" or "cryptographic capabilities". This approach provides
