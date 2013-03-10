@@ -40,7 +40,6 @@ Status
 Keyspace is still experimental and the design is subject to change. Some of
 the planned changes are:
 
-* Switch from AES-CBC to NaCl SecretBox (xsalsa20 + poly1305)
 * Redesign capabilities as real URIs
 * Switch backend k/v storage to Moneta
 * (Maybe) switch from Sinatra to Webmachine
