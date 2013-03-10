@@ -1,6 +1,5 @@
 require 'rbnacl'
 require 'base32'
-require 'openssl'
 
 module Keyspace
   # Something requires a capability we don't have
@@ -11,26 +10,26 @@ module Keyspace
 
   # Capabilities provide access to encrypted data
   class Capability
-    # Use AES256 with CBC padding
-    SYMMETRIC_CIPHER = "aes-256-cbc"
+    # Size of the symmetric key (32-bytes)
+    SECRET_KEY_BYTES = Crypto::NaCl::SECRETKEYBYTES
 
-    # Size of the symmetric key used for encrypting contents
-    SYMMETRIC_KEY_BYTES = 32
+    # Number of bytes in a nonce used by SecretBox (24-bytes)
+    NONCE_BYTES      = Crypto::NaCl::NONCEBYTES
 
-    # Number of bytes in signatures
-    SIGNATURE_BYTES = Crypto::NaCl::SIGNATUREBYTES
+    # Number of bytes in Ed25519 signatures (64-bytes)
+    SIGNATURE_BYTES  = Crypto::NaCl::SIGNATUREBYTES
 
-    # Maximum length of a key (as in key/value pair) name
-    MAX_NAME_LENGTH = 256
+    # Maximum length of a name (as in name/value pair)
+    MAX_NAME_LENGTH  = 256
 
-    attr_reader :id, :signature_key, :verify_key, :encryption_key, :capabilities
+    attr_reader :id, :signing_key, :verify_key, :secret_key, :capabilities
 
     # Generate a new writecap. Note: id is not authenticated
     def self.generate(id)
-      signature_key  = Crypto::SigningKey.generate.to_bytes
-      encryption_key = Crypto::Random.random_bytes(32)
+      signing_key  = Crypto::SigningKey.generate.to_bytes
+      secret_key = Crypto::Random.random_bytes(SECRET_KEY_BYTES)
 
-      new(id, 'rw', signature_key, encryption_key)
+      new(id, 'rw', signing_key, secret_key)
     end
 
     # Parse a capability token into a capability object
@@ -40,57 +39,49 @@ module Keyspace
 
       case caps
       when 'r', 'rw'
-        encryption_key, signature_key = keys.unpack("a#{SYMMETRIC_KEY_BYTES}a*")
+        secret_key, signing_key = keys.unpack("a#{SECRET_KEY_BYTES}a*")
       when 'v'
-        encryption_key, signature_key = nil, keys
+        secret_key, signing_key = nil, keys
       else raise ArgumentError, "invalid capability level: #{caps}"
       end
 
-      new(id, caps, signature_key, encryption_key)
+      new(id, caps, signing_key, secret_key)
     end
 
-    def initialize(id, caps, signature_key, encryption_key = nil)
-      @id, @capabilities, @encryption_key = id, caps, encryption_key
+    def initialize(id, caps, signing_key, secret_key = nil)
+      @id, @capabilities, @secret_key = id, caps, secret_key
       
       if caps.include?('w')
-        @signature_key = Crypto::SigningKey.new(signature_key)
-        @verify_key = @signature_key.verify_key
+        @signing_key = Crypto::SigningKey.new(signing_key)
+        @verify_key = @signing_key.verify_key
       else
-        @signature_key = nil
-        @verify_key = Crypto::VerifyKey.new(signature_key)
+        @signing_key = nil
+        @verify_key = Crypto::VerifyKey.new(signing_key)
       end
     end
 
     # Encrypt a name/value pair for insertion into Keyspace
     def encrypt(name, value, timestamp = Time.now)
-      raise InvalidCapabilityError, "don't have write capability" unless @signature_key
+      raise InvalidCapabilityError, "don't have write capability" unless @signing_key
       raise ArgumentError, "name too long" if name.to_s.size > MAX_NAME_LENGTH
 
-      cipher = OpenSSL::Cipher::Cipher.new(SYMMETRIC_CIPHER)
-      cipher.encrypt
+      box = Crypto::SecretBox.new(secret_key)
 
-      cipher.key = encryption_key
-      cipher.iv  = iv = cipher.random_iv
+      # With 192-bits of potential nonce space, we're fairly safe
+      # from collisions simply by using a random nonce
+      nonce = Crypto::Random.random_bytes(NONCE_BYTES)
+      ciphertext = box.encrypt(nonce, value)
 
-      ciphertext =  cipher.update(value)
-      ciphertext << cipher.final
-
-      pack_value(name, timestamp, iv, ciphertext)
+      pack_value(name, timestamp, nonce, ciphertext)
     end
 
     # Decrypt an encrypted value, checking its authenticity with the verify key
     def decrypt(encrypted_value)
-      raise InvalidCapabilityError, "don't have read capability" unless encryption_key
+      raise InvalidCapabilityError, "don't have read capability" unless secret_key
       name, timestamp, nonce, ciphertext = unpack_value(encrypted_value)
 
-      cipher = OpenSSL::Cipher::Cipher.new("aes-256-cbc")
-      cipher.decrypt
-
-      cipher.key = encryption_key
-      cipher.iv  = nonce
-
-      plaintext = cipher.update(ciphertext)
-      plaintext << cipher.final
+      box = Crypto::SecretBox.new(secret_key)
+      plaintext = box.decrypt(nonce, ciphertext)
 
       [name, plaintext, timestamp]
     end
@@ -111,8 +102,8 @@ module Keyspace
       # TODO: hash/encrypt name
       name = name.to_s
 
-      message   = [name.bytesize, name, timestamp.utc.to_i, nonce, ciphertext].pack("Ca*Qa16a*")
-      signature = @signature_key.sign(message)
+      message   = [name.bytesize, name, timestamp.utc.to_i, nonce, ciphertext].pack("Ca*Qa#{NONCE_BYTES}a*")
+      signature = @signing_key.sign(message)
       signature + message
     end
 
@@ -120,7 +111,7 @@ module Keyspace
     def unpack_value(encrypted_value)
       verify!(encrypted_value)
       signature, key_size, rest = encrypted_value.unpack("a#{SIGNATURE_BYTES}Ca*")
-      name, timestamp, nonce, ciphertext = rest.unpack("a#{key_size}Qa16a*")
+      name, timestamp, nonce, ciphertext = rest.unpack("a#{key_size}Qa#{NONCE_BYTES}a*")
 
       [name, Time.at(timestamp), nonce, ciphertext]
     end
@@ -129,8 +120,8 @@ module Keyspace
     def degrade(new_capability)
       case new_capability
       when :r, :read, :readcap
-        raise InvalidCapabilityError, "don't have read capability" unless @encryption_key
-        self.class.new(@id, 'r', @verify_key.to_bytes, @encryption_key)
+        raise InvalidCapabilityError, "don't have read capability" unless @secret_key
+        self.class.new(@id, 'r', @verify_key.to_bytes, @secret_key)
       when :v, :verify, :verifycap
         self.class.new(@id, 'v', @verify_key.to_bytes)
       else raise ArgumentError, "invalid capability: #{new_capability}"
@@ -154,10 +145,10 @@ module Keyspace
 
     # Generate a token out of this capability
     def to_s
-      keys = encryption_key || ""
+      keys = secret_key || ""
       
-      if @signature_key
-        keys += @signature_key.to_bytes
+      if @signing_key
+        keys += @signing_key.to_bytes
       else
         keys += @verify_key.to_bytes
       end
