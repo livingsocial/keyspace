@@ -11,14 +11,20 @@ module Keyspace
         201
       end
 
-      get '/vaults/:vault/:key' do
+      get '/vaults/:vault/:name' do
+        begin
+          name = Base32.decode(params[:name])
+        rescue => ex
+          halt 404
+        end
+
         begin
           vault = Vault.get(params[:vault])
         rescue Keyspace::VaultNotFoundError
           halt 404
         end
 
-        ciphertext = vault.get(params[:key])
+        ciphertext = vault.get(name)
         halt 404 unless ciphertext
 
         [200, {"Content-Type" => Keyspace::MIME_TYPE}, ciphertext]

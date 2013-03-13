@@ -31,9 +31,11 @@ module Keyspace
       end
 
       # Retrieve a value from keyspace
-      def get(key)
+      def get(name)
+        encrypted_name = Base32.encode(@capability.encrypt_name(name))
+
         uri = URI(Keyspace::Client.url)
-        uri.path = "/vaults/#{id}/#{key}"
+        uri.path = "/vaults/#{id}/#{encrypted_name}"
 
         http = Net::HTTP.new(uri.host, uri.port)
         response = http.request Net::HTTP::Get.new(uri.request_uri)

@@ -37,16 +37,16 @@ module Keyspace
       end
 
       # Retrieve an encrypted value from a vault
-      def get(key)
-        self.class.store.get(id, key.to_s)
+      def get(name)
+        self.class.store.get(id, name.to_s)
       end
       alias_method :[], :get
 
       # Store an encrypted value in this vault
-      def put(ciphertext)
+      def put(message)
         # TODO: check timestamp against existing values to prevent replay attacks
-        name, timestmp = @capability.unpack_value(ciphertext)
-        self.class.store.put(id, name, ciphertext)
+        encrypted_name, encrypted_value, timestamp = @capability.unpack_signed_nvpair(message)
+        self.class.store.put(id, encrypted_name, message)
       end
       alias_method :[]=, :put
 

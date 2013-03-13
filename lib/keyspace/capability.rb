@@ -1,5 +1,6 @@
 require 'rbnacl'
 require 'base32'
+require 'hkdf'
 
 module Keyspace
   # Something requires a capability we don't have
@@ -58,6 +59,17 @@ module Keyspace
         @signing_key = nil
         @verify_key = Crypto::VerifyKey.new(signing_key)
       end
+
+      if secret_key
+        hkdf = HKDF.new(@secret_key, :algorithm => 'SHA256')
+        @name_siv_key = hkdf.next_bytes(32)
+        @name_key     = hkdf.next_bytes(SECRET_KEY_BYTES)
+        @value_key    = hkdf.next_bytes(SECRET_KEY_BYTES)
+      else
+        @name_siv_key = nil
+        @name_key     = nil
+        @value_key    = nil
+      end
     end
 
     # Encrypt a name/value pair for insertion into Keyspace
@@ -65,25 +77,15 @@ module Keyspace
       raise InvalidCapabilityError, "don't have write capability" unless @signing_key
       raise ArgumentError, "name too long" if name.to_s.size > MAX_NAME_LENGTH
 
-      box = Crypto::SecretBox.new(secret_key)
-
-      # With 192-bits of potential nonce space, we're fairly safe
-      # from collisions simply by using a random nonce
-      nonce = Crypto::Random.random_bytes(NONCE_BYTES)
-      ciphertext = box.encrypt(nonce, value)
-
-      pack_value(name, timestamp, nonce, ciphertext)
+      pack_signed_nvpair(encrypt_name(name.to_s), encrypt_value(value.to_s), timestamp)
     end
 
     # Decrypt an encrypted value, checking its authenticity with the verify key
-    def decrypt(encrypted_value)
+    def decrypt(message)
       raise InvalidCapabilityError, "don't have read capability" unless secret_key
-      name, timestamp, nonce, ciphertext = unpack_value(encrypted_value)
+      encrypted_name, encrypted_value, timestamp = unpack_signed_nvpair(message)
 
-      box = Crypto::SecretBox.new(secret_key)
-      plaintext = box.decrypt(nonce, ciphertext)
-
-      [name, plaintext, timestamp]
+      [decrypt_name(encrypted_name), decrypt_value(encrypted_value), timestamp]
     end
 
     # Determine if the given encrypted value is authentic
@@ -98,22 +100,27 @@ module Keyspace
     end
 
     # Pack an encrypted value into its serialized representation
-    def pack_value(name, timestamp, nonce, ciphertext)
-      # TODO: hash/encrypt name
-      name = name.to_s
+    def pack_signed_nvpair(encrypted_name, encrypted_value, timestamp)
+      message   = [
+        encrypted_name.bytesize, 
+        encrypted_name,
+        encrypted_value.bytesize,
+        encrypted_value,
+        timestamp.utc.to_i
+      ].pack("na*na*Q")
 
-      message   = [name.bytesize, name, timestamp.utc.to_i, nonce, ciphertext].pack("Ca*Qa#{NONCE_BYTES}a*")
       signature = @signing_key.sign(message)
       signature + message
     end
 
     # Parse an encrypted value into its constituent components
-    def unpack_value(encrypted_value)
-      verify!(encrypted_value)
-      signature, key_size, rest = encrypted_value.unpack("a#{SIGNATURE_BYTES}Ca*")
-      name, timestamp, nonce, ciphertext = rest.unpack("a#{key_size}Qa#{NONCE_BYTES}a*")
+    def unpack_signed_nvpair(message)
+      verify!(message)
+      signature, name_size, rest       = message.unpack("a#{SIGNATURE_BYTES}na*")
+      encrypted_name, value_size, rest = rest.unpack("a#{name_size}na*") 
+      encrypted_value, timestamp       = rest.unpack("a#{value_size}Q")
 
-      [name, Time.at(timestamp), nonce, ciphertext]
+      [encrypted_name, encrypted_value, Time.at(timestamp)]
     end
 
     # Degrade this capability to a lower level
@@ -159,6 +166,44 @@ module Keyspace
 
     def inspect
       "#<#{self.class} #{to_s}>"
+    end
+
+    # Encrypt names of name/value pairs using Synthetic IVs (SIV)
+    # SIV is CPA secure, but gives us deterministic encryption for
+    # the keys of interest. This allows someone else with the same
+    # key to calculate a deterministic ciphertext representing the
+    # name of a name/value pair. This keeps names of name/value pairs
+    # secure while allowing clients to request specific encrypted keys
+    def encrypt_name(name)
+      raise InvalidCapabilityError, "don't have read capability" unless @name_key
+      name = name.to_s
+      
+      # Use HKDF as our SIV PRG
+      hkdf  = HKDF.new(name, :iv => @name_siv_key, :algorithm => 'SHA256')
+      nonce = hkdf.next_bytes(NONCE_BYTES)
+
+      ciphertext = Crypto::SecretBox.new(@name_key).encrypt(nonce, name)
+      nonce + ciphertext
+    end
+
+    # Decrypt a SIV-encrypted name
+    def decrypt_name(message)
+      nonce, ciphertext = message[0,NONCE_BYTES], message[NONCE_BYTES..-1]
+      Crypto::SecretBox.new(@name_key).decrypt(nonce, ciphertext)
+    end
+
+    # Encrypt a value with a random nonce
+    def encrypt_value(value)
+      nonce      = Crypto::Random.random_bytes(NONCE_BYTES)
+      ciphertext = Crypto::SecretBox.new(@value_key).encrypt(nonce, value)
+
+      nonce + ciphertext
+    end
+
+    # Decrypt a value with a random nonce
+    def decrypt_value(message)
+      nonce, ciphertext = message[0,NONCE_BYTES], message[NONCE_BYTES..-1]
+      Crypto::SecretBox.new(@value_key).decrypt(nonce, ciphertext)
     end
   end
 end

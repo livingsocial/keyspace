@@ -3,8 +3,8 @@ require 'spec_helper'
 describe Keyspace::Server::Backend::Redis do
   subject { Keyspace::Server::Backend::Redis.new(::Redis.new(:db => 10))}
 
-  let(:example_vault)    { :foobar }
-  let(:example_key)       { :baz }
+  let(:example_vault)     { :foobar }
+  let(:example_name)      { :baz }
   let(:example_value)     { 'quux' }
   let(:example_verifycap) { Keyspace::Capability.generate(example_vault).degrade(:verify) }
 
@@ -20,7 +20,7 @@ describe Keyspace::Server::Backend::Redis do
 
   it "stores data in vaults" do
     subject.create example_verifycap
-    subject.put(example_vault, example_key, example_value)
-    subject.get(example_vault, example_key).should == example_value
+    subject.put(example_vault, example_name, example_value)
+    subject.get(example_vault, example_name).should == example_value
   end
 end

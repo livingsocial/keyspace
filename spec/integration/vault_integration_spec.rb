@@ -1,12 +1,12 @@
 require 'spec_helper'
 
 describe "Vault integration" do
-  let(:example_port)   { 12345 }
-  let(:example_url)    { "http://127.0.0.1:#{example_port}/" }
+  let(:example_port)  { 12345 }
+  let(:example_url)   { "http://127.0.0.1:#{example_port}/" }
 
   let(:example_vault) { "foobar" }
-  let(:example_key)    { "qux" }
-  let(:example_value)  { "This is an example value" }
+  let(:example_name)  { "qux" }
+  let(:example_value) { "This is an example value" }
 
   before :all do
     Keyspace::Server::Vault.store = Keyspace::Server::Backend::Redis.new(Redis.new(:db => 10))
