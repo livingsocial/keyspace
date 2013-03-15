@@ -37,6 +37,8 @@ Keyspace is built on [RbNaCl][rbnacl], a Ruby wrapper to the
 Status
 ------
 
+![DANGER: EXPERIMENTAL](https://raw.github.com/cryptosphere/cryptosphere/master/images/experimental.png)
+
 Keyspace is still experimental and the design is subject to change. Some of
 the planned changes are:
 
