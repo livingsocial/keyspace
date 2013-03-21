@@ -112,9 +112,10 @@ unable to sign new values without the writecap.
 
 All encryption of plaintext happens client-side via a command line tool which
 runs on a computer under the control of a trusted administrator. Data is
-encrypted using NaCl's "SecretBox" primitive (i.e. XSalsa20 + Poly1305) 
-prior to transmission to the server, and remains encrypted until accessed by
-another client with the read (or verify) capabilities.
+encrypted using NaCl's "SecretBox" primitive (i.e. XSalsa20 + Poly1305)
+and signed with the Ed25519 digital signature algorithm prior to transmission
+to the server, and remains encrypted until accessed by another client with the
+read (or verify) capabilities.
 
 Ruby Client
 -----------
