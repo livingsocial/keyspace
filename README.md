@@ -36,7 +36,7 @@ stores including all ActiveRecord compatible databases, Redis, Riak, Cassandra,
 CouchDB, MongoDB, and many others. If there's a key/value store you would like
 to persist to, Moneta probably supports it.
 
-Cryptogarphy in Keyspace is handled by [RbNaCl][rbnacl], a Ruby wrapper to the
+Cryptography in Keyspace is handled by [RbNaCl][rbnacl], a Ruby wrapper to the
 [Networking and Cryptography][nacl] library by Daniel J. Bernstein.
 
 [capabilities]: http://en.wikipedia.org/wiki/Capability-based_security
