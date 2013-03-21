@@ -27,7 +27,9 @@ secure sharing of access to vaults.
 
 This means there is no access control system (e.g. RBAC) other than the capability
 tokens themselves. Authorization is handled completely by whether or not you have
-the necessary cryptographic tokens to carry out a desired action.
+the necessary cryptographic tokens to carry out a desired action. This
+straightforward approach leaves little room for error and reduces the entire attack
+surface to vulnerabilities in the cryptographic code or leaked capability tokens.
 
 Keyspace is built on [Moneta][moneta], an abstract API to many kinds of key/value
 stores including all ActiveRecord compatible databases, Redis, Riak, Cassandra,
