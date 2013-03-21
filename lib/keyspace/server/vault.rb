@@ -13,13 +13,14 @@ module Keyspace
         # Generate a completely new vault
         def create(verifycap)
           # TODO: check for existing vaults
-          store.create(verifycap)
+          verifycap = Capability.parse(verifycap) if verifycap.is_a? String
+          store["verifycap:#{verifycap.id}"] = verifycap.to_s
           new verifycap
         end
 
         # Find an existing vault by its ID
         def get(vault_id)
-          verifycap = store.verifycap(vault_id)
+          verifycap = store["verifycap:#{vault_id}"]
           raise VaultNotFoundError, "no such vault: #{vault_id}" unless verifycap
 
           new(verifycap)
@@ -27,7 +28,8 @@ module Keyspace
 
         # Delete a vault by its ID
         def delete(vault_id)
-          store.delete(vault_id)
+          # TODO: delete vault contents
+          store.delete("verifycap:#{vault_id}")
         end
       end
 
@@ -38,7 +40,7 @@ module Keyspace
 
       # Retrieve an encrypted value from a vault
       def get(name)
-        self.class.store.get(id, name.to_s)
+        self.class.store["value:#{id}:#{name}"]
       end
       alias_method :[], :get
 
@@ -46,7 +48,7 @@ module Keyspace
       def put(message)
         # TODO: check timestamp against existing values to prevent replay attacks
         encrypted_name, encrypted_value, timestamp = Message.unpack(@capability, message)
-        self.class.store.put(id, encrypted_name, message)
+        self.class.store["value:#{id}:#{encrypted_name}"] = message
       end
       alias_method :[]=, :put
 

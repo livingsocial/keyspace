@@ -1,3 +1,5 @@
+require 'moneta'
+
 require 'keyspace/version'
 require 'keyspace/capability'
 require 'keyspace/message'

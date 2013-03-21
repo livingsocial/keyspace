@@ -16,14 +16,15 @@ Gem::Specification.new do |gem|
   gem.version       = Keyspace::VERSION
 
   gem.add_runtime_dependency 'rbnacl',  '~> 1.0.0'
+  gem.add_runtime_dependency 'hkdf',    '~> 0.2.0'
   gem.add_runtime_dependency 'base32',  '~> 0.2.0'
   gem.add_runtime_dependency 'sinatra', '~> 1.3.5'
   gem.add_runtime_dependency 'rack',    '~> 1.5.2'
   gem.add_runtime_dependency 'thor',    '~> 0.17.0'
-  gem.add_runtime_dependency 'redis',   '~> 3.0.3'
-  gem.add_runtime_dependency 'hkdf'
+  gem.add_runtime_dependency 'moneta',  '~> 0.7.14'
 
   gem.add_development_dependency 'rake'
   gem.add_development_dependency 'rspec'
   gem.add_development_dependency 'rack-test'
+  gem.add_development_dependency 'redis'
 end

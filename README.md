@@ -39,12 +39,7 @@ Status
 
 ![DANGER: EXPERIMENTAL](https://raw.github.com/livingsocial/keyspace/master/images/experimental.png)
 
-Keyspace is still experimental and the design is subject to change. Some of
-the planned changes are:
-
-* Redesign capabilities as real URIs
-* Switch backend k/v storage to Moneta
-* (Maybe) switch from Sinatra to Webmachine
+Keyspace is still experimental and the design is subject to change.
 
 Mailing List
 ------------

@@ -9,7 +9,7 @@ describe "Vault integration" do
   let(:example_value) { "This is an example value" }
 
   before :all do
-    Keyspace::Server::Vault.store = Keyspace::Server::Backend::Redis.new(Redis.new(:db => 10))
+    Keyspace::Server::Vault.store = Moneta.new(:Redis)
 
     Keyspace::Server::App.set(:port, example_port)
     @thread = Thread.new { Keyspace::Server::App.run! }

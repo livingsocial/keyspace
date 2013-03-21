@@ -14,12 +14,12 @@ describe Keyspace::Server::Vault do
   end
 
   it "creates vaults from verifycaps" do
-    vault_store.should_receive(:create).with(verifycap)
+    vault_store.should_receive(:[]=).with("verifycap:#{example_vault}", verifycap.to_s)
     Keyspace::Server::Vault.create(verifycap).should be_a Keyspace::Server::Vault
   end
 
   it "deletes vaults" do
-    vault_store.should_receive(:delete).with(example_vault)
+    vault_store.should_receive(:delete).with("verifycap:#{example_vault}")
     Keyspace::Server::Vault.delete(example_vault)
   end
 
@@ -27,19 +27,19 @@ describe Keyspace::Server::Vault do
     encrypted_message = Keyspace::Message.new(example_name, example_value).encrypt(writecap)
     encrypted_name    = Keyspace::Message.unpack(writecap, encrypted_message)[0]
 
-    vault_store.should_receive(:verifycap).and_return(verifycap)
+    vault_store.should_receive(:[]).with("verifycap:#{example_vault}").and_return(verifycap)
     vault = Keyspace::Server::Vault.get(example_vault)
 
-    vault_store.should_receive(:put).with(example_vault, encrypted_name, encrypted_message)
+    vault_store.should_receive(:[]=).with("value:#{example_vault}:#{encrypted_name}", encrypted_message)
     vault.put(encrypted_message)
   end
 
   it "retrieves encrypted data from vaults" do
-    vault_store.should_receive(:verifycap).and_return(verifycap)
+    vault_store.should_receive(:[]).with("verifycap:#{example_vault}").and_return(verifycap)
     vault = Keyspace::Server::Vault.get(example_vault)
 
     encrypted_message = Keyspace::Message.new(example_name, example_value).encrypt(writecap)
-    vault_store.should_receive(:get).with(example_vault, example_name).and_return encrypted_message
+    vault_store.should_receive(:[]).with("value:#{example_vault}:#{example_name}").and_return encrypted_message
     vault.get(example_name).should == encrypted_message
   end
 end
