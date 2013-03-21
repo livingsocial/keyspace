@@ -73,9 +73,9 @@ There are 3 parts to the capability token:
 
 There are three capability levels for each vault:
 
-* verifycap (v): Can determine a value is authentic, but can't decrypt it
-* readcap (r):   Can read values from within the vault, but cannot write to it
-* writecap (rw): Can write new values into the vault
+* **verifycap** (ks.verify): Can determine a value is authentic, but can't decrypt it
+* **readcap** (ks.read): Can read values from within the vault, but cannot write to it
+* **writecap** (ks.write): Can write new values into the vault
 
 Each set of capabilities builds upon the last: users with the read capability
 can also verify, and users with the write capability can also read. Users who
