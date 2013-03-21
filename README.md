@@ -124,9 +124,9 @@ Keyspace provides a simple Ruby client for storing and retrieving encrypted
 data from the server. In this example, a system operator creates a vault,
 puts a value inside of it, and then saves the vault to the server:
 
-```
+```ruby
 >> vault = Keyspace::Client::Vault.create("myvault")
- => #<Keyspace::Client::Vault myvault:rw@d4u5qekdyezqlugxmht...ir2r3nbcd>
+ => #<Keyspace::Client::Vault ks.write:myvault@d4u5qekdyezqlugxmht...ir2r3nbcd>
 >> vault[:foobar] = "baz"
  => "baz"
 >> vault.save!
@@ -136,9 +136,9 @@ puts a value inside of it, and then saves the vault to the server:
 The system administrator can then degrade the capability for this vault to
 a readcap prior to disseminating it to a system user:
 
-```
+```ruby
 >> vault.capability.degrade(:readcap).to_s
- => "myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi"
+ => "ks.read:myvault@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi"
 ```
 
 We'll now switch to the perspective of a system user who has been given the
@@ -146,11 +146,11 @@ readcap created above. First, they'll set the server URL and create a new
 vault object from the readcap. They'll then be able to access values from
 this vault by key, but they cannot make changes:
 
-```
+```ruby
 >> Keyspace::Client.url = "http://127.0.0.1:4567"
  => "http://127.0.0.1:4567"
->> vault = Keyspace::Client::Vault.new("myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi")
- => #<Keyspace::Client::Vault "myvault:r@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi">
+>> vault = Keyspace::Client::Vault.new("ks.read:myvault@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi")
+ => #<Keyspace::Client::Vault "ks.read:myvault@d4u5qekdyezqlugxmhtuerytyyjp4fqjqsgbqjhfgm5mnw...daokugjdi">
 >> vault[:foobar]
  => "baz"
 >> vault[:foobar] = "can't touch this"
