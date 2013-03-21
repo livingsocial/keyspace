@@ -4,7 +4,8 @@ Keyspace
 [![Code Climate](https://codeclimate.com/github/livingsocial/keyspace.png)](https://codeclimate.com/github/livingsocial/keyspace)
 [![Coverage Status](https://coveralls.io/repos/livingsocial/keyspace/badge.png?branch=master)](https://coveralls.io/r/livingsocial/keyspace)
 
-Simple secret storage for webapps, using [RbNaCl][rbnacl] for security.
+End-to-end (i.e. client-side) encryption for key/value stores, using
+[RbNaCl][rbnacl] for security.
 
 [rbnacl]: https://github.com/cryptosphere/rbnacl
 
