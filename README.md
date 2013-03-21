@@ -53,6 +53,12 @@ message to:
 Capabilities
 ------------
 
+Capabilities are (relatively) short tokens which grant a specific type of
+authority within Keyspace. Knowledge of a capability is necessary and
+sufficient to gain a particular type of access. Capabilities can also be
+"degraded", so that a capability holder can grant others a limited subset
+of the authority granted to them by the capability they hold.
+
 A capability token looks like the following:
 
     foobar:rw@d2hotnrmcxsqgibpszqoj6mowovsmmq4ajgy626qavbtk74tsbk5bqjypkhjlmbsqy7266umric6vn7iasaa6ccljqzrr7d35dqrh7i
