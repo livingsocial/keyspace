@@ -13,7 +13,7 @@ module Keyspace
 
       get '/vaults/:vault/:name' do
         begin
-          name = Base32.decode(params[:name])
+          name = Base32.decode(params[:name].upcase)
         rescue => ex
           halt 404
         end

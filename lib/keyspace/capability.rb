@@ -23,18 +23,22 @@ module Keyspace
 
     # Parse a capability token into a capability object
     def self.parse(capability_string)
-      matches = capability_string.to_s.match(/^(\w+):(\w+)@(.*)/)
-      id, caps, keys = matches[1], matches[2], Base32.decode(matches[3].upcase)
+      matches = capability_string.to_s.match(/\Aks\.(\w+):(\w+)@(.*)\Z/)
+      scheme, vault, keys = matches[1], matches[2], Base32.decode(matches[3].upcase)
 
-      case caps
-      when 'r', 'rw'
+      caps = "v"
+
+      case scheme
+      when 'write', 'read'
         secret_key, signing_key = keys.unpack("a#{SECRET_KEY_BYTES}a*")
-      when 'v'
+        caps << "r"
+        caps << "w" if scheme == 'write'
+      when 'verify'
         secret_key, signing_key = nil, keys
-      else raise ArgumentError, "invalid capability level: #{caps}"
+      else raise ArgumentError, "invalid capability URI: #{capability_string}"
       end
 
-      new(id, caps, signing_key, secret_key)
+      new(vault, caps, signing_key, secret_key)
     end
 
     def initialize(id, caps, signing_key, secret_key = nil)
@@ -98,6 +102,14 @@ module Keyspace
 
     # Generate a token out of this capability
     def to_s
+      if writecap?
+        scheme = "ks.write"
+      elsif readcap?
+        scheme = "ks.read"
+      else
+        scheme = "ks.verify"
+      end
+
       keys = @secret_key || ""
       
       if @signing_key
@@ -107,7 +119,7 @@ module Keyspace
       end
       
       keys32 = Base32.encode(keys).downcase.sub(/=+$/, '')
-      "#{id}:#{capabilities || 'v'}@#{keys32}"
+      "#{scheme}:#{id}@#{keys32}"
     end
 
     def inspect

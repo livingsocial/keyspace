@@ -61,13 +61,13 @@ of the authority granted to them by the capability they hold.
 
 A capability token looks like the following:
 
-    foobar:rw@d2hotnrmcxsqgibpszqoj6mowovsmmq4ajgy626qavbtk74tsbk5bqjypkhjlmbsqy7266umric6vn7iasaa6ccljqzrr7d35dqrh7i
+    ks.write:foobar@d2hotnrmcxsqgibpszqoj6mowovsmmq4ajgy626qavbtk74tsbk5bqjypkhjlmbsqy7266umric6vn7iasaa6ccljqzrr7d35dqrh7i
 
 There are 3 parts to the capability token:
 
-* "foobar": the name of the vault this capability controls access to
-* "rw": this indicates this capability has read-write access, which makes
-  this capability a "writecap". There are three capability levels (see below)
+* "ks.write": URI scheme indicating this is a Keyspace (i.e. "ks") writecap
+  There are three capability levels (see below)
+* "foobar": the name of the vault this writecap provides access to
 * "d2hotnrmcxsqgibpsz...": A Base32-encoded string containing the cryptographic
   keys which control access to this vault.
 

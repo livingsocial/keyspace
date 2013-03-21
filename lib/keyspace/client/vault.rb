@@ -32,7 +32,7 @@ module Keyspace
 
       # Retrieve a value from keyspace
       def get(name)
-        encrypted_name = Base32.encode(Message.encrypted_name(@capability, name))
+        encrypted_name = Base32.encode(Message.encrypted_name(@capability, name)).downcase.sub(/=+$/, '')
 
         uri = URI(Keyspace::Client.url)
         uri.path = "/vaults/#{id}/#{encrypted_name}"
