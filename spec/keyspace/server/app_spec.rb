@@ -25,29 +25,29 @@ describe Keyspace::Server::App do
   end
 
   it "stores data in vaults" do
-    ciphertext = writecap.encrypt(example_name, example_value)
+    encrypted_message = Keyspace::Message.new(example_name, example_value).encrypt(writecap)
     vault_store.should_receive(:verifycap).with(example_vault).and_return(verifycap.to_s)
 
-    encrypted_name = writecap.unpack_signed_nvpair(ciphertext)[0]
-    vault_store.should_receive(:put).with(example_vault, encrypted_name, ciphertext)
+    encrypted_name = Keyspace::Message.unpack(writecap, encrypted_message)[0]
+    vault_store.should_receive(:put).with(example_vault, encrypted_name, encrypted_message)
 
-    put "/vaults/#{example_vault}", ciphertext, "CONTENT_TYPE" => Keyspace::MIME_TYPE
+    put "/vaults/#{example_vault}", encrypted_message, "CONTENT_TYPE" => Keyspace::MIME_TYPE
     last_response.status.should == 200
   end
 
   it "retrieves data from vaults" do
     vault_store.should_receive(:verifycap).with(example_vault).and_return(verifycap.to_s)
 
-    ciphertext = writecap.encrypt(example_name, example_value)
-    encrypted_name = writecap.unpack_signed_nvpair(ciphertext)[0]
+    encrypted_message = Keyspace::Message.new(example_name, example_value).encrypt(writecap)
+    encrypted_name    = Keyspace::Message.unpack(writecap, encrypted_message)[0]
 
-    vault_store.should_receive(:get).with(example_vault, encrypted_name).and_return ciphertext
+    vault_store.should_receive(:get).with(example_vault, encrypted_name).and_return encrypted_message
     get "/vaults/#{example_vault}/#{Base32.encode(encrypted_name)}"
 
     last_response.status.should == 200
-    key, value, _ = readcap.decrypt(last_response.body)
+    message = readcap.decrypt(last_response.body)
 
-    key.should eq example_name
-    value.should eq example_value
+    message.name.should  eq example_name
+    message.value.should eq example_value
   end
 end

@@ -32,7 +32,7 @@ module Keyspace
 
       # Retrieve a value from keyspace
       def get(name)
-        encrypted_name = Base32.encode(@capability.encrypt_name(name))
+        encrypted_name = Base32.encode(Message.encrypted_name(@capability, name))
 
         uri = URI(Keyspace::Client.url)
         uri.path = "/vaults/#{id}/#{encrypted_name}"
@@ -41,8 +41,7 @@ module Keyspace
         response = http.request Net::HTTP::Get.new(uri.request_uri)
 
         if response.code == "200"
-          key, value, timestamp = @capability.decrypt(response.body)
-          value
+          @capability.decrypt(response.body).value
         elsif response.code == "404"
           nil
         else raise KeyNotFoundError, "couldn't get key: #{response.code} #{response.message}"
@@ -84,7 +83,7 @@ module Keyspace
             http = Net::HTTP.new(uri.host, uri.port)
 
             request = Net::HTTP::Put.new(uri.request_uri)
-            request.body = @capability.encrypt(key, value)
+            request.body = Message.new(key, value).encrypt(@capability)
             request['Content-Type'] = Keyspace::MIME_TYPE
 
             response = http.request request

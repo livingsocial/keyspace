@@ -45,7 +45,7 @@ module Keyspace
       # Store an encrypted value in this vault
       def put(message)
         # TODO: check timestamp against existing values to prevent replay attacks
-        encrypted_name, encrypted_value, timestamp = @capability.unpack_signed_nvpair(message)
+        encrypted_name, encrypted_value, timestamp = Message.unpack(@capability, message)
         self.class.store.put(id, encrypted_name, message)
       end
       alias_method :[]=, :put

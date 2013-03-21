@@ -11,19 +11,7 @@ module Keyspace
 
   # Capabilities provide access to encrypted data
   class Capability
-    # Size of the symmetric key (32-bytes)
-    SECRET_KEY_BYTES = Crypto::NaCl::SECRETKEYBYTES
-
-    # Number of bytes in a nonce used by SecretBox (24-bytes)
-    NONCE_BYTES      = Crypto::NaCl::NONCEBYTES
-
-    # Number of bytes in Ed25519 signatures (64-bytes)
-    SIGNATURE_BYTES  = Crypto::NaCl::SIGNATUREBYTES
-
-    # Maximum length of a name (as in name/value pair)
-    MAX_NAME_LENGTH  = 256
-
-    attr_reader :id, :signing_key, :verify_key, :secret_key, :capabilities
+    attr_reader :id, :verify_key, :capabilities
 
     # Generate a new writecap. Note: id is not authenticated
     def self.generate(id)
@@ -54,73 +42,31 @@ module Keyspace
       
       if caps.include?('w')
         @signing_key = Crypto::SigningKey.new(signing_key)
-        @verify_key = @signing_key.verify_key
+        @verify_key  = @signing_key.verify_key
       else
         @signing_key = nil
-        @verify_key = Crypto::VerifyKey.new(signing_key)
-      end
-
-      if secret_key
-        hkdf = HKDF.new(@secret_key, :algorithm => 'SHA256')
-        @name_siv_key = hkdf.next_bytes(32)
-        @name_key     = hkdf.next_bytes(SECRET_KEY_BYTES)
-        @value_key    = hkdf.next_bytes(SECRET_KEY_BYTES)
-      else
-        @name_siv_key = nil
-        @name_key     = nil
-        @value_key    = nil
+        @verify_key  = Crypto::VerifyKey.new(signing_key)
       end
     end
 
-    # Encrypt a name/value pair for insertion into Keyspace
-    def encrypt(name, value, timestamp = Time.now)
-      raise InvalidCapabilityError, "don't have write capability" unless @signing_key
-      raise ArgumentError, "name too long" if name.to_s.size > MAX_NAME_LENGTH
-
-      pack_signed_nvpair(encrypt_name(name.to_s), encrypt_value(value.to_s), timestamp)
+    # Return the signing key if we have write capability
+    def signing_key
+      @signing_key or raise InvalidCapabilityError, "don't have write capability"
     end
 
-    # Decrypt an encrypted value, checking its authenticity with the verify key
-    def decrypt(message)
-      raise InvalidCapabilityError, "don't have read capability" unless secret_key
-      encrypted_name, encrypted_value, timestamp = unpack_signed_nvpair(message)
-
-      [decrypt_name(encrypted_name), decrypt_value(encrypted_value), timestamp]
+    # Return the secret key if we have read capability
+    def secret_key
+      @secret_key or raise InvalidCapabilityError, "don't have read capability"
     end
 
-    # Determine if the given encrypted value is authentic
-    def verify(encrypted_value)
-      signature, message = encrypted_value.unpack("a#{SIGNATURE_BYTES}a*")
-      @verify_key.verify(message, signature)
+    # Encrypt a message with this capability
+    def encrypt(message)
+      message.encrypt(self)
     end
 
-    # Verify which raises if the signature doesn't match
-    def verify!(encrypted_value)
-      verify(encrypted_value) or raise InvalidSignatureError, "potentially forged data: signature mismatch"
-    end
-
-    # Pack an encrypted value into its serialized representation
-    def pack_signed_nvpair(encrypted_name, encrypted_value, timestamp)
-      message   = [
-        encrypted_name.bytesize, 
-        encrypted_name,
-        encrypted_value.bytesize,
-        encrypted_value,
-        timestamp.utc.to_i
-      ].pack("na*na*Q")
-
-      signature = @signing_key.sign(message)
-      signature + message
-    end
-
-    # Parse an encrypted value into its constituent components
-    def unpack_signed_nvpair(message)
-      verify!(message)
-      signature, name_size, rest       = message.unpack("a#{SIGNATURE_BYTES}na*")
-      encrypted_name, value_size, rest = rest.unpack("a#{name_size}na*") 
-      encrypted_value, timestamp       = rest.unpack("a#{value_size}Q")
-
-      [encrypted_name, encrypted_value, Time.at(timestamp)]
+    # Decrypt a message with this capability
+    def decrypt(encrypted_message)
+      Message.decrypt(self, encrypted_message)
     end
 
     # Degrade this capability to a lower level
@@ -152,7 +98,7 @@ module Keyspace
 
     # Generate a token out of this capability
     def to_s
-      keys = secret_key || ""
+      keys = @secret_key || ""
       
       if @signing_key
         keys += @signing_key.to_bytes
@@ -166,44 +112,6 @@ module Keyspace
 
     def inspect
       "#<#{self.class} #{to_s}>"
-    end
-
-    # Encrypt names of name/value pairs using Synthetic IVs (SIV)
-    # SIV is CPA secure, but gives us deterministic encryption for
-    # the keys of interest. This allows someone else with the same
-    # key to calculate a deterministic ciphertext representing the
-    # name of a name/value pair. This keeps names of name/value pairs
-    # secure while allowing clients to request specific encrypted keys
-    def encrypt_name(name)
-      raise InvalidCapabilityError, "don't have read capability" unless @name_key
-      name = name.to_s
-      
-      # Use HKDF as our SIV PRG
-      hkdf  = HKDF.new(name, :iv => @name_siv_key, :algorithm => 'SHA256')
-      nonce = hkdf.next_bytes(NONCE_BYTES)
-
-      ciphertext = Crypto::SecretBox.new(@name_key).encrypt(nonce, name)
-      nonce + ciphertext
-    end
-
-    # Decrypt a SIV-encrypted name
-    def decrypt_name(message)
-      nonce, ciphertext = message[0,NONCE_BYTES], message[NONCE_BYTES..-1]
-      Crypto::SecretBox.new(@name_key).decrypt(nonce, ciphertext)
-    end
-
-    # Encrypt a value with a random nonce
-    def encrypt_value(value)
-      nonce      = Crypto::Random.random_bytes(NONCE_BYTES)
-      ciphertext = Crypto::SecretBox.new(@value_key).encrypt(nonce, value)
-
-      nonce + ciphertext
-    end
-
-    # Decrypt a value with a random nonce
-    def decrypt_value(message)
-      nonce, ciphertext = message[0,NONCE_BYTES], message[NONCE_BYTES..-1]
-      Crypto::SecretBox.new(@value_key).decrypt(nonce, ciphertext)
     end
   end
 end

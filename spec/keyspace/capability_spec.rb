@@ -7,15 +7,6 @@ describe Keyspace::Capability do
 
   subject { Keyspace::Capability.generate('test_capability') }
 
-  it "encrypts and decrypts values for storage in a capability" do
-    encrypted_value  = subject.encrypt(example_name, example_value, example_date)
-    key, value, date = subject.decrypt(encrypted_value)
-
-    key.should   eq example_name
-    value.should eq example_value
-    date.utc.to_i.should eq example_date.utc.to_i
-  end
-
   it "degrades writecaps to readcaps" do
     subject.should be_writecap
     subject.should be_readcap

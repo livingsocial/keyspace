@@ -24,22 +24,22 @@ describe Keyspace::Server::Vault do
   end
 
   it "stores encrypted data in vaults" do
-    ciphertext     = writecap.encrypt(example_name, example_value)
-    encrypted_name = writecap.unpack_signed_nvpair(ciphertext)[0]
+    encrypted_message = Keyspace::Message.new(example_name, example_value).encrypt(writecap)
+    encrypted_name    = Keyspace::Message.unpack(writecap, encrypted_message)[0]
 
     vault_store.should_receive(:verifycap).and_return(verifycap)
     vault = Keyspace::Server::Vault.get(example_vault)
 
-    vault_store.should_receive(:put).with(example_vault, encrypted_name, ciphertext)
-    vault.put(ciphertext)
+    vault_store.should_receive(:put).with(example_vault, encrypted_name, encrypted_message)
+    vault.put(encrypted_message)
   end
 
   it "retrieves encrypted data from vaults" do
     vault_store.should_receive(:verifycap).and_return(verifycap)
     vault = Keyspace::Server::Vault.get(example_vault)
 
-    ciphertext = writecap.encrypt(example_name, example_value)
-    vault_store.should_receive(:get).with(example_vault, example_name).and_return ciphertext
-    vault.get(example_name).should == ciphertext
+    encrypted_message = Keyspace::Message.new(example_name, example_value).encrypt(writecap)
+    vault_store.should_receive(:get).with(example_vault, example_name).and_return encrypted_message
+    vault.get(example_name).should == encrypted_message
   end
 end
